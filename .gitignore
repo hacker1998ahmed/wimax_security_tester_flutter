@@ -1,0 +1,35 @@
+# Keystore Files
+/android/app/keystore/
+/android/key.properties
+/android/app/google-services.json
+
+# Flutter & Dart
+/Flutter/
+/.dart_tool/
+/.packages
+/.flutter-plugins
+/.flutter-plugins-dependencies
+.pub-cache/
+
+# Android
+/android/.gradle/
+/android/local.properties
+/android/**/GeneratedPluginRegistrant.java
+
+# iOS
+/ios/.generated/
+/ios/Flutter/App.framework
+/ios/Flutter/Flutter.podspec
+/ios/Pods/
+
+# Builds
+/build/
+/android/app/build/
+/ios/DerivedData/
+
+# IDE
+.vscode/
+.idea/
+*.iml
+*.swp
+.DS_Store

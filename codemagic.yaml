@@ -2,105 +2,63 @@ workflows:
   android_production:
     name: 🚀 Android Production Build
     environment:
-      groups:
-        - firebase_credentials  # لمتغيرات Firebase
-      vars:
-        FLUTTER_VERSION: "3.22.2"  # أحدث إصدار مستقر
-        BUILD_NUMBER: 1  # يمكن زيادته تلقائياً
-    triggering:
-      events:
-        - push
-      branch_patterns:
-        - pattern: main
-          include: true
+      vars:  # تعريف المتغيرات مباشرة بدلاً من المجموعات
+        FLUTTER_VERSION: "3.22.2"
+        FIREBASE_API_KEY: $FIREBASE_API_KEY  # سيتم تعريفها في إعدادات Codemagic
+        FIREBASE_APP_ID: $FIREBASE_APP_ID
+        FIREBASE_SERVICE_ACCOUNT_JSON: $FIREBASE_SERVICE_ACCOUNT_JSON
     scripts:
-      # ======================
-      # 1. إعداد البيئة
-      # ======================
       - name: 🛠️ إعداد البيئة
         script: |
           flutter version $FLUTTER_VERSION
           flutter doctor -v
-          
-          # إصلاح تبعيات npm/firebase
           npm install -g firebase-tools@latest --force
-          firebase --version
 
-      # ======================
-      # 2. تنظيف المشروع
-      # ======================
-      - name: 🧹 تنظيف شامل
+      - name: 🧹 تنظيف المشروع
         script: |
           flutter clean
           rm -rf android/app/src/main/java/io/flutter/plugins/
           rm -rf android/app/src/main/kotlin/io/flutter/
 
-      # ======================
-      # 3. تحديث التبعيات
-      # ======================
       - name: 🔄 تحديث التبعيات
         script: |
-          flutter pub upgrade --major-versions
+          flutter pub get
           cd android && ./gradlew clean
 
-      # ======================
-      # 4. بناء APK
-      # ======================
       - name: 🏗️ بناء APK
         script: |
           flutter build apk --release \
             --dart-define=FIREBASE_API_KEY=$FIREBASE_API_KEY \
             --dart-define=FIREBASE_APP_ID=$FIREBASE_APP_ID \
             --split-debug-info=./debug_info \
-            --obfuscate \
             --verbose
-          
-          # التحقق من وجود الملف
-          APK_PATH="build/app/outputs/flutter-apk/app-release.apk"
-          if [ -f "$APK_PATH" ]; then
-            echo "✔ تم البناء بنجاح! حجم الملف:"
-            du -h "$APK_PATH"
-          else
+
+          if [ ! -f "build/app/outputs/flutter-apk/app-release.apk" ]; then
             echo "❌ فشل البناء - لم يتم إنشاء APK"
-            ls -la build/app/outputs/flutter-apk/
+            ls -la build/app/outputs/
             exit 1
           fi
 
-      # ======================
-      # 5. النشر على Firebase
-      # ======================
       - name: 📤 نشر على Firebase
         script: |
-          # استخدام Service Account الآمن
           echo "$FIREBASE_SERVICE_ACCOUNT_JSON" > /tmp/service-account.json
-          
           firebase appdistribution:distribute \
             build/app/outputs/flutter-apk/app-release.apk \
             --app $FIREBASE_APP_ID \
             --service-account-json /tmp/service-account.json \
             --groups "testers" \
             --debug
-
-    # ======================
-    # إعدادات المخرجات
-    # ======================
     artifacts:
       - build/app/outputs/flutter-apk/*.apk
       - debug_info/**
-
     publishing:
       email:
         recipients:
-          - "your.email@example.com"  # ⚠️ استبدل بريدك
+          - "your.email@example.com"
         notify:
           success: true
           failure: true
-
-    # ======================
-    # تحسينات الأداء
-    # ======================
     cache:
       cache_paths:
         - ~/.gradle/caches
         - ~/.pub-cache
-        - /tmp/service-account.json

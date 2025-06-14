@@ -17,7 +17,16 @@ android {
         release {
             signingConfig signingConfigs.release
             minifyEnabled true
+            shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
+        debug {
+            signingConfig signingConfigs.release // للتوقيع أثناء التطوير أيضاً
+        }
+    }
+    defaultConfig {
+        minSdkVersion 19 // يجب أن يكون 19 أو أعلى
+        targetSdkVersion 34
+        multiDexEnabled true
     }
 }

@@ -1,6 +1,6 @@
 ################################################################
-# WiMax Security Tester - Codemagic Build Configuration
-# Flutter 3.19.5 | Android SDK 34 | Compatible with Codemagic
+# WiMax Security Tester - Flutter Build Configuration
+# تم التحديث ليعمل مع مجموعات المتغيرات الحالية
 ################################################################
 
 workflows:
@@ -8,101 +8,29 @@ workflows:
     name: Android Production Build
     environment:
       groups:
-        - signing_credentials
-        - firebase_config
-        - play_store_credentials
+        - signing_credentials  # يجب أن يكون الاسم مطابقًا تمامًا لما في Codemagic
+        - firebase_config      # يجب أن يكون الاسم مطابقًا تمامًا لما في Codemagic
       vars:
-        FCI_KEYSTORE_PATH: "android/app/keystore/release.keystore"
-        FCI_BUILD_NDK_VERSION: "25.1.8937393"
-    triggering:
-      branch_patterns:
-        - pattern: main
-          include: true
+        PACKAGE_NAME: "com.example.wimax"  # استبدل باسم حزمة تطبيقك
+        
     scripts:
-      # =============================
-      # 1. Environment Setup
-      # =============================
-      - name: Setup Java
+      # [1] إعداد توقيع Android
+      - name: 🔐 Prepare Keystore
         script: |
-          echo "JAVA_HOME=${JAVA_HOME_11_X64}" >> $CM_ENV
-          java -version
-
-      - name: Decode Keystore
-        script: |
-          mkdir -p $(dirname $FCI_KEYSTORE_PATH)
-          echo $ENCODED_KEYSTORE | base64 --decode > $FCI_KEYSTORE_PATH
-          chmod 600 $FCI_KEYSTORE_PATH
+          mkdir -p android/app/keystore
+          echo $ENCODED_KEYSTORE | base64 --decode > android/app/keystore/release.jks
           keytool -list -v \
-            -keystore $FCI_KEYSTORE_PATH \
-            -storepass $STORE_PASSWORD \
+            -keystore android/app/keystore/release.jks \
+            -storepass $STORE_PWD \
             -alias $KEY_ALIAS
 
-      # =============================
-      # 2. Build Process
-      # =============================
-      - name: Install Dependencies
+      # [2] البناء
+      - name: 🛠️ Build App Bundle
         script: |
           flutter pub get
-          flutter pub run build_runner build --delete-conflicting-outputs
-
-      - name: Build App Bundle
-        script: |
           flutter build appbundle --release \
             --dart-define=FIREBASE_API_KEY=$FIREBASE_API_KEY \
-            --dart-define=FIREBASE_APP_ID=$FIREBASE_APP_ID \
-            --obfuscate \
-            --split-debug-info=./debug_info
-
-      # =============================
-      # 3. Firebase Distribution
-      # =============================
-      - name: Distribute via Firebase CLI
-        script: |
-          npm install -g firebase-tools
-          firebase appdistribution:distribute \
-            build/app/outputs/bundle/release/*.aab \
-            --app $FIREBASE_APP_ID \
-            --token "$FIREBASE_CLI_TOKEN" \
-            --groups "qa-team,testers"
+            --dart-define=FIREBASE_APP_ID=$FIREBASE_APP_ID
 
     artifacts:
       - build/app/outputs/bundle/release/*.aab
-      - build/app/outputs/mapping/release/mapping.txt
-      - debug_info/
-
-    publishing:
-      google_play:
-        credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
-        track: production
-      email:
-        recipients:
-          - dev-team@yourcompany.com
-        notify:
-          success: true
-          failure: true
-
-################################################################
-# Environment Configuration
-################################################################
-environment:
-  flutter: "3.19.5"
-  xcode: "15.2"  # Required even for Android builds
-  ndk: "25.1.8937393"
-
-################################################################
-# Required Environment Variables (Set in Codemagic UI)
-################################################################
-# Group 1: signing_credentials
-#   - ENCODED_KEYSTORE (Base64 encoded keystore.jks)
-#   - STORE_PASSWORD
-#   - KEY_PASSWORD
-#   - KEY_ALIAS
-#
-# Group 2: firebase_config
-#   - FIREBASE_API_KEY
-#   - FIREBASE_APP_ID
-#   - FIREBASE_CLI_TOKEN (from `firebase login:ci`)
-#
-# Group 3: play_store_credentials
-#   - GCLOUD_SERVICE_ACCOUNT_CREDENTIALS (JSON file)
-################################################################

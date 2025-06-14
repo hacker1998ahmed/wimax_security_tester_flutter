@@ -1,82 +1,12 @@
-def keystoreProperties = new Properties()
-def keystorePropertiesFile = rootProject.file('key.properties')
-if (keystorePropertiesFile.exists()) {
-    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
-}
-
-android {
-    compileSdkVersion 34
-
-    defaultConfig {
-        applicationId "com.example.wimax" // استبدل باسم حزمة تطبيقك
-        minSdkVersion 21 // تم التحديث إلى 21 (أدنى إصدار مدعوم لـ Android V2 Embedding)
-        targetSdkVersion 34
-        versionCode 1
-        versionName "1.0.0"
-        multiDexEnabled true
-
-        // إضافة هذه السطور لتفعيل Android V2 Embedding
-        manifestPlaceholders = [
-            flutterEmbedding: 2
-        ]
+buildscript {
+    ext.kotlin_version = '1.9.22'
+    repositories {
+        google()
+        mavenCentral()
     }
-
-    namespace "com.example.wimax" // أضف هذا السطر لتجنب مشاكل التسمية
-
-    signingConfigs {
-        release {
-            keyAlias keystoreProperties['keyAlias']
-            keyPassword keystoreProperties['keyPassword']
-            storeFile keystoreProperties['storeFile'] ? file(keystoreProperties['storeFile']) : null
-            storePassword keystoreProperties['storePassword']
-        }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:8.2.2'
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+        classpath 'com.google.gms:google-services:4.4.0'  // إذا كنت تستخدم Firebase
     }
-
-    buildTypes {
-        release {
-            signingConfig signingConfigs.release
-            minifyEnabled true
-            shrinkResources true
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            
-            // إضافة هذه السطور لتحسين الأداء
-            ndk {
-                abiFilters 'armeabi-v7a', 'arm64-v8a', 'x86_64'
-            }
-        }
-        debug {
-            signingConfig signingConfigs.release
-        }
-    }
-
-    // إضافة هذه السطور لمنع مشكلة 64k method limit
-    dexOptions {
-        javaMaxHeapSize "4g"
-        preDexLibraries true
-    }
-
-    // إضافة هذه السطور لتحسين الأداء
-    compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
-    }
-
-    // إضافة هذه السطور لتحسين الأداء
-    packagingOptions {
-        resources {
-            excludes += ['META-INF/*.kotlin_module']
-        }
-    }
-}
-
-// إضافة هذا القسم لتحسين أداء Flutter
-flutter {
-    source '../..'
-}
-
-// إضافة هذا القسم لتحسين الأداء
-dependencies {
-    implementation 'androidx.multidex:multidex:2.0.1'
-    implementation 'com.google.android.material:material:1.9.0'
-    implementation 'androidx.core:core-ktx:1.12.0'
 }

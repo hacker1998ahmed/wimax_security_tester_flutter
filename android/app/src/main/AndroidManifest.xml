@@ -1,29 +1,42 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.example.wimax"> <!-- استبدل باسم حزمة تطبيقك -->
+    xmlns:tools="http://schemas.android.com/tools"
+    package="com.yourcompany.wimax_security_tester">
+
+    <!-- الأذونات الأساسية -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    
+    <!-- للأجهزة التي تعتمد على WiFi -->
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
 
     <application
+        android:name="io.flutter.app.FlutterApplication"
         android:label="WiMax Security Tester"
         android:icon="@mipmap/ic_launcher"
         android:usesCleartextTraffic="true"
-        android:requestLegacyExternalStorage="true">
+        tools:replace="android:label">
 
         <activity
             android:name=".MainActivity"
-            android:exported="true" <!-- هذا السطر ضروري -->
             android:launchMode="singleTop"
             android:theme="@style/LaunchTheme"
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
             android:hardwareAccelerated="true"
             android:windowSoftInputMode="adjustResize">
+            
             <intent-filter>
-                <action android:name="android.intent.action.MAIN"/>
-                <category android:name="android.intent.category.LAUNCHER"/>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+
+            <!-- إزالة أي إشارة لـ Firebase هنا إن وجدت -->
         </activity>
 
-        <!-- إضافة هذه السطور لدعم Deep Links -->
+        <!-- إزالة أي تعريفات لـ Firebase أو خدمات Google -->
+        
         <meta-data
-            android:name="flutter_deeplinking_enabled"
-            android:value="true" />
+            android:name="flutterEmbedding"
+            android:value="2" />
     </application>
 </manifest>

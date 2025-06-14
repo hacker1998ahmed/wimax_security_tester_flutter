@@ -20,7 +20,7 @@ workflows:
             echo "✔️ ملفات Gradle موجودة بالفعل."
           fi
 
-      # الخطوة 2: إعداد البيئة مع معالجة خطأ firebase-tools
+      # الخطوة 2: إعداد البيئة
       - name: 🛠️ إعداد البيئة
         script: |
           flutter version $FLUTTER_VERSION
@@ -45,14 +45,30 @@ workflows:
           flutter clean
           rm -rf android/app/src/main/java/io/flutter/plugins/
           rm -rf android/app/src/main/kotlin/io/flutter/
+          rm -rf android/.gradle
+          rm -rf android/build
 
-      # الخطوة 5: تحديث التبعيات
+      # الخطوة 5: إصلاح ملفات Gradle
+      - name: 🔧 إصلاح ملفات البناء
+        script: |
+          # إصلاح ملف android/app/build.gradle
+          sed -i '' '/android()/d' android/app/build.gradle
+          
+          # تحديث إصدارات SDK في ملف android/app/build.gradle
+          sed -i '' 's/compileSdkVersion [0-9]*/compileSdkVersion 34/g' android/app/build.gradle
+          sed -i '' 's/targetSdkVersion [0-9]*/targetSdkVersion 34/g' android/app/build.gradle
+          sed -i '' 's/minSdkVersion [0-9]*/minSdkVersion 21/g' android/app/build.gradle
+          
+          # تحديث إصدار Gradle في android/build.gradle
+          sed -i '' 's/com.android.tools.build:gradle:[0-9\.]*/com.android.tools.build:gradle:7.3.0/g' android/build.gradle
+
+      # الخطوة 6: تحديث التبعيات
       - name: 🔄 تحديث التبعيات
         script: |
           flutter pub get
           ./android/gradlew clean -p android
 
-      # الخطوة 6: بناء APK
+      # الخطوة 7: بناء APK
       - name: 🏗️ بناء APK
         script: |
           set -e
@@ -72,7 +88,7 @@ workflows:
             exit 1
           fi
 
-      # الخطوة 7: النشر على Firebase
+      # الخطوة 8: النشر على Firebase
       - name: 📤 نشر على Firebase
         script: |
           echo "$FIREBASE_SERVICE_ACCOUNT_JSON" > /tmp/service-account.json

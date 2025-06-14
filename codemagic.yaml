@@ -4,34 +4,22 @@ workflows:
     environment:
       vars:
         FLUTTER_VERSION: "3.19.5"
-        # تعريف متغيرات Firebase مباشرة (بدلاً من المجموعات)
         FIREBASE_API_KEY: $FIREBASE_API_KEY
         FIREBASE_APP_ID: $FIREBASE_APP_ID
         FIREBASE_SERVICE_ACCOUNT_JSON: $FIREBASE_SERVICE_ACCOUNT_JSON
-    triggering:
-      events: [push]
-      branch_patterns:
-        - pattern: main
-          include: true
     scripts:
-      # ===================================
-      # 1. إعداد البيئة الأساسية
-      # ===================================
       - name: 🛠️ إعداد البيئة
         script: |
           flutter version $FLUTTER_VERSION
           flutter doctor -v
-          
-          # حل جذري لمشكلة Firebase CLI
-          npm config set prefix ~/.npm-global
-          echo 'export PATH=~/.npm-global/bin:$PATH' >> ~/.bashrc
-          source ~/.bashrc
+          flutter pub upgrade --major-versions
           npm install -g firebase-tools@latest --force
-          firebase --version
 
-      # ===================================
-      # 2. بناء APK بدون توقيع
-      # ===================================
+      - name: 🔧 إصلاح Android Embedding
+        script: |
+          rm -rf android/app/src/main/java/io/flutter/plugins/
+          flutter create --platforms android .
+
       - name: 🏗️ بناء APK
         script: |
           flutter clean
@@ -39,27 +27,18 @@ workflows:
           flutter build apk --release \
             --dart-define=FIREBASE_API_KEY=$FIREBASE_API_KEY \
             --dart-define=FIREBASE_APP_ID=$FIREBASE_APP_ID \
-            --split-debug-info=./debug_info
+            --split-debug-info=./debug_info \
+            --verbose
           
-          # التحقق من المخرجات
           ls -la build/app/outputs/flutter-apk/
-          APK_PATH="build/app/outputs/flutter-apk/app-release.apk"
-          if [ -f "$APK_PATH" ]; then
-            echo "✔ تم البناء بنجاح! حجم الملف:"
-            du -h "$APK_PATH"
-          else
-            echo "❌ فشل في إنشاء ملف APK"
+          if [ ! -f "build/app/outputs/flutter-apk/app-release.apk" ]; then
+            echo "❌ فشل البناء - لم يتم إنشاء APK"
             exit 1
           fi
 
-      # ===================================
-      # 3. النشر على Firebase
-      # ===================================
       - name: 📤 نشر على Firebase
         script: |
-          # إنشاء ملف Service Account مؤقت
           echo "$FIREBASE_SERVICE_ACCOUNT_JSON" > /tmp/service-account.json
-          
           firebase appdistribution:distribute \
             build/app/outputs/flutter-apk/app-release.apk \
             --app $FIREBASE_APP_ID \
@@ -68,15 +47,3 @@ workflows:
             --debug
     artifacts:
       - build/app/outputs/flutter-apk/*.apk
-      - debug_info/**
-    publishing:
-      email:
-        recipients:
-          - "your-email@example.com" # ⚠️ استبدل بريدك الفعلي
-        notify:
-          success: true
-          failure: true
-    cache:
-      cache_paths:
-        - ~/.gradle/caches
-        - ~/.pub-cache

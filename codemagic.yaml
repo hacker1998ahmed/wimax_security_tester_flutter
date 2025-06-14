@@ -1,39 +1,48 @@
 workflows:
-  production:
-    name: WiMax Production Build
+  secure_release:
+    name: Secure Release Build
     environment:
       groups:
-        - keystore_credentials
-        - firebase_config
+        - signing_credentials
       vars:
-        FCI_KEYSTORE_PATH: "android/app/keystore/keystore.jks"
+        FCI_KEYSTORE_PATH: "android/app/keystore/keystore.jks"  # سيتم إنشاؤه
     triggering:
-      events:
-        - push
       branch_patterns:
         - pattern: main
           include: true
-          source: true
     scripts:
-      - name: Decode Keystore
+      - name: Setup Keystore from Env
         script: |
+          mkdir -p android/app/keystore
           echo $FCI_KEYSTORE | base64 --decode > $FCI_KEYSTORE_PATH
-          scripts:
-      - name: Set up keystore
-        script: |
-         mkdir -p android/app/keystore
-         echo $FCI_KEYSTORE | base64 --decode > android/app/keystore/keystore.jks
-         chmod 600 android/app/keystore/keystore.jks
-      - name: Build Android
+          chmod 600 $FCI_KEYSTORE_PATH
+          
+          # التحقق من صحة الملف
+          keytool -list -v \
+            -keystore $FCI_KEYSTORE_PATH \
+            -storepass $KEYSTORE_PASSWORD \
+            -alias $KEY_ALIAS || {
+              echo "❌ Keystore validation failed";
+              exit 1;
+            }
+
+      - name: Build App Bundle
         script: |
           flutter pub get
-          flutter build appbundle --release --dart-define=FIREBASE_API_KEY=$FIREBASE_API_KEY --dart-define=FIREBASE_APP_ID=$FIREBASE_APP_ID
+          flutter build appbundle --release \
+            --dart-define=FIREBASE_API_KEY=$FIREBASE_API_KEY \
+            --dart-define=FIREBASE_APP_ID=$FIREBASE_APP_ID
+
+      - name: Cleanup Keystore
+        script: |
+          rm -f $FCI_KEYSTORE_PATH
+          echo "🔒 Keystore removed successfully"
     artifacts:
       - build/app/outputs/bundle/release/*.aab
     publishing:
-      email:
-        recipients:
-          - your_email@example.com
       google_play:
         credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
-        track: production
+        track: internal
+      email:
+        recipients:
+          - your.email@example.com

@@ -1,70 +1,63 @@
-################################################################
-# WiMax Security Tester - Flutter Production Build
-# تم التهيئة ليعمل مع المتغيرات الفردية بدون مجموعات
-################################################################
-
 workflows:
   android_production:
     name: 🚀 Android Production Build
     environment:
-      vars:  # استخدام متغيرات فردية مباشرة
-        ENCODED_KEYSTORE: $ENCODED_KEYSTORE
-        STORE_PWD: $STORE_PWD
-        KEY_PWD: $KEY_PWD
-        KEY_ALIAS: $KEY_ALIAS
-        FIREBASE_API_KEY: $FIREBASE_API_KEY
-        FIREBASE_APP_ID: $FIREBASE_APP_ID
-        FIREBASE_TOKEN: $FIREBASE_TOKEN
+      groups:
+        - firebase_credentials
+      vars:
+        FLUTTER_VERSION: "3.19.5"
     triggering:
       events: [push]
       branch_patterns:
         - pattern: main
           include: true
     scripts:
-      # ======================
-      # 1. إعداد توقيع التطبيق
-      # ======================
-      - name: 🔐 إعداد Keystore
+      - name: 🛠️ إعداد البيئة
         script: |
-          mkdir -p android/app/keystore
-          echo $ENCODED_KEYSTORE | base64 --decode > android/app/keystore/release.jks
-          chmod 600 android/app/keystore/release.jks
-          echo "✔ تم تحضير ملف التوقيع بنجاح"
+          flutter version $FLUTTER_VERSION
+          flutter doctor -v
+          
+          # حل مشكلة Firebase CLI
+          sudo rm -f /usr/local/bin/firebase
+          npm install -g firebase-tools@latest --force
 
-      # ======================
-      # 2. بناء التطبيق
-      # ======================
-      - name: 🛠️ بناء حزمة التطبيق
+      - name: 🏗️ بناء APK
         script: |
+          flutter clean
           flutter pub get
-          flutter build appbundle --release \
+          flutter build apk --release \
             --dart-define=FIREBASE_API_KEY=$FIREBASE_API_KEY \
             --dart-define=FIREBASE_APP_ID=$FIREBASE_APP_ID \
-            --obfuscate \
             --split-debug-info=./debug_info
-          echo "✔ تم البناء بنجاح"
+          
+          # التحقق من وجود الملف
+          APK_PATH="build/app/outputs/flutter-apk/app-release.apk"
+          if [ ! -f "$APK_PATH" ]; then
+            echo "❌ Error: APK file not found!"
+            ls -la build/app/outputs/flutter-apk/
+            exit 1
+          fi
 
-      # ======================
-      # 3. نشر على Firebase
-      # ======================
-      - name: 📤 النشر على Firebase
+      - name: 📤 نشر على Firebase
         script: |
-          npm install -g firebase-tools
+          # استخدام Service Account كبديل آمن
           firebase appdistribution:distribute \
-            build/app/outputs/bundle/release/*.aab \
+            build/app/outputs/flutter-apk/app-release.apk \
             --app $FIREBASE_APP_ID \
-            --token "$FIREBASE_TOKEN" \
-            --groups "testers"
-          echo "✔ تم النشر على Firebase بنجاح"
-
+            --service-account-json "$FIREBASE_SERVICE_ACCOUNT_JSON" \
+            --groups "testers" \
+            --debug
     artifacts:
-      - build/app/outputs/bundle/release/*.aab
-      - debug_info/
-
+      - build/app/outputs/flutter-apk/*.apk
+      - debug_info/**
     publishing:
       email:
         recipients:
-          - "gogom8870@gmail.com"  # ⚠️ استبدل بريدك الفعلي
+          - "your-email@example.com"
         notify:
           success: true
           failure: true
+    cache:
+      cache_paths:
+        - ~/.gradle/caches
+        - ~/.pub-cache

@@ -1,89 +1,79 @@
-# ==============================================
-# WiMax Pentest Tool - Secure Build Configuration
-# ==============================================
+################################################################
+# WiMax Security Tester - Codemagic Build Configuration
+# Flutter 3.19.5 | Android SDK 34 | Compatible with Codemagic
+################################################################
 
 workflows:
-  production:
-    name: Production Build
+  android_production:
+    name: Android Production Build
     environment:
       groups:
         - signing_credentials
         - firebase_config
+        - play_store_credentials
       vars:
         FCI_KEYSTORE_PATH: "android/app/keystore/release.keystore"
-        FCI_BUILD_NDK_VERSION: "25.1.8937393"  # تحديد إصدار NDK
+        FCI_BUILD_NDK_VERSION: "25.1.8937393"
     triggering:
-      events:
-        - push
       branch_patterns:
         - pattern: main
           include: true
     scripts:
-      # ======================
-      # Security Setup Phase
-      # ======================
-      - name: Setup Secure Environment
+      # =============================
+      # 1. Environment Setup
+      # =============================
+      - name: Setup Java
         script: |
-          # إنشاء مجلد Keystore
-          mkdir -p android/app/keystore
-          
-          # فك تشفير Keystore من متغير البيئة
+          echo "JAVA_HOME=${JAVA_HOME_11_X64}" >> $CM_ENV
+          java -version
+
+      - name: Decode Keystore
+        script: |
+          mkdir -p $(dirname $FCI_KEYSTORE_PATH)
           echo $ENCODED_KEYSTORE | base64 --decode > $FCI_KEYSTORE_PATH
-          
-          # ضبط أذونات الملف
           chmod 600 $FCI_KEYSTORE_PATH
-          
-          # التحقق من صحة Keystore
           keytool -list -v \
             -keystore $FCI_KEYSTORE_PATH \
-            -storepass $STORE_PASS \
-            -alias $KEY_ALIAS || {
-              echo "❌ Keystore validation failed";
-              exit 1;
-            }
+            -storepass $STORE_PASSWORD \
+            -alias $KEY_ALIAS
 
-      # ======================
-      # Build Phase
-      # ======================
+      # =============================
+      # 2. Build Process
+      # =============================
       - name: Install Dependencies
         script: |
           flutter pub get
           flutter pub run build_runner build --delete-conflicting-outputs
 
-      - name: Build Android App Bundle
+      - name: Build App Bundle
         script: |
           flutter build appbundle --release \
             --dart-define=FIREBASE_API_KEY=$FIREBASE_API_KEY \
             --dart-define=FIREBASE_APP_ID=$FIREBASE_APP_ID \
             --obfuscate \
-            --split-debug-info=./debug-info
+            --split-debug-info=./debug_info
 
-      # ======================
-      # Post-Build Security
-      # ======================
-      - name: Secure Cleanup
+      # =============================
+      # 3. Firebase Distribution
+      # =============================
+      - name: Distribute via Firebase CLI
         script: |
-          # حذف آمن للملفات الحساسة
-          shred -u $FCI_KEYSTORE_PATH
-          rm -rf ./debug-info/*.symbols
-          
-          # تنظيف الذاكرة المؤقتة
-          flutter clean
-          
-          echo "🔒 All sensitive files destroyed"
+          npm install -g firebase-tools
+          firebase appdistribution:distribute \
+            build/app/outputs/bundle/release/*.aab \
+            --app $FIREBASE_APP_ID \
+            --token "$FIREBASE_CLI_TOKEN" \
+            --groups "qa-team,testers"
 
     artifacts:
       - build/app/outputs/bundle/release/*.aab
       - build/app/outputs/mapping/release/mapping.txt
-      - debug-info/
+      - debug_info/
 
     publishing:
       google_play:
-        credentials: $GCLOUD_SERVICE_ACCOUNT_JSON
+        credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
         track: production
-      firebase:
-        credentials: $FIREBASE_SERVICE_ACCOUNT_JSON
-        channel: live
       email:
         recipients:
           - dev-team@yourcompany.com
@@ -91,19 +81,28 @@ workflows:
           success: true
           failure: true
 
-# ===========================
-# Environment Specifications
-# ===========================
+################################################################
+# Environment Configuration
+################################################################
 environment:
-  flutter: "3.19.5"  # تحديد إصدار Flutter
-  xcode: "15.2"      # لإعدادات iOS المستقبلية
+  flutter: "3.19.5"
+  xcode: "15.2"  # Required even for Android builds
   ndk: "25.1.8937393"
 
-# ======================
-# Notifications
-# ======================
-notification:
-  slack:
-    - $SLACK_CHANNEL_ID
-  teams:
-    - $TEAMS_WEBHOOK_URL
+################################################################
+# Required Environment Variables (Set in Codemagic UI)
+################################################################
+# Group 1: signing_credentials
+#   - ENCODED_KEYSTORE (Base64 encoded keystore.jks)
+#   - STORE_PASSWORD
+#   - KEY_PASSWORD
+#   - KEY_ALIAS
+#
+# Group 2: firebase_config
+#   - FIREBASE_API_KEY
+#   - FIREBASE_APP_ID
+#   - FIREBASE_CLI_TOKEN (from `firebase login:ci`)
+#
+# Group 3: play_store_credentials
+#   - GCLOUD_SERVICE_ACCOUNT_CREDENTIALS (JSON file)
+################################################################

@@ -1,0 +1,53 @@
+/wimax_pentest_flutter
+├── android/
+│   ├── app/
+│   │   ├── src/
+│   │   │   ├── main/
+│   │   │   │   ├── res/
+│   │   │   │   │   ├── xml/
+│   │   │   │   │   │   ├── network_security_config.xml
+│   │   │   │   │   │   └── file_paths.xml
+│   │   │   │   │   └── values/
+│   │   │   │   │       └── styles.xml
+│   │   │   │   ├── cpp/
+│   │   │   │   │   └── native_lib.cpp
+│   │   │   │   └── AndroidManifest.xml
+│   │   │   └── profile/
+│   │   └── build.gradle
+├── ios/
+│   └── Podfile
+├── lib/
+│   ├── core/
+│   │   ├── attack_executor.dart
+│   │   ├── tool_manager.dart
+│   │   └── wimax_scanner.dart
+│   ├── models/
+│   │   ├── attack_result.dart
+│   │   └── network_model.dart
+│   ├── services/
+│   │   ├── native_bridge.dart
+│   │   └── report_service.dart
+│   ├── ui/
+│   │   ├── screens/
+│   │   │   ├── attack_screen.dart
+│   │   │   └── home_screen.dart
+│   │   └── widgets/
+│   │       ├── attack_button.dart
+│   │       └── terminal_output.dart
+│   └── main.dart
+├── test/
+│   └── widget_test.dart
+├── assets/
+│   ├── tools/
+│   │   ├── armeabi-v7a/
+│   │   ├── arm64-v8a/
+│   │   ├── x86/
+│   │   └── x86_64/
+│   └── wordlists/
+│       ├── rockyou.txt
+│       └── wimax_passlist.txt
+├── pubspec.yaml
+├── codemagic.yaml
+key.properties (جديد)
+
+└── README.md

@@ -1,0 +1,24 @@
+workflows:
+  wimax-release:
+    name: WiMax Release
+    environment:
+      groups:
+        - firebase_config
+        - keystore_credentials
+      vars:
+        FCI_KEYSTORE_PATH: "keystore/keystore.jks"
+        FCI_KEY_ALIAS: $KEY_ALIAS
+        FCI_KEY_PASSWORD: $KEY_PASSWORD
+        FCI_KEYSTORE_PASSWORD: $KEYSTORE_PASSWORD
+    scripts:
+      - name: Set up keystore
+        script: |
+          echo $FCI_KEYSTORE | base64 --decode > $FCI_KEYSTORE_PATH
+      - flutter pub get
+      - flutter build appbundle --release
+    artifacts:
+      - build/app/outputs/bundle/release/*.aab
+    publishing:
+      email:
+        recipients:
+          - your.email@example.com

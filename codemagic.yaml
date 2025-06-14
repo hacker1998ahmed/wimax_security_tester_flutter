@@ -1,18 +1,35 @@
 workflows:
   android_production:
-    name: 🚀 Android Production Build
+    name: � Android Production Build
     environment:
-      vars:  # تعريف المتغيرات مباشرة بدلاً من المجموعات
+      vars:
         FLUTTER_VERSION: "3.22.2"
-        FIREBASE_API_KEY: $FIREBASE_API_KEY  # سيتم تعريفها في إعدادات Codemagic
+        FIREBASE_API_KEY: $FIREBASE_API_KEY
         FIREBASE_APP_ID: $FIREBASE_APP_ID
         FIREBASE_SERVICE_ACCOUNT_JSON: $FIREBASE_SERVICE_ACCOUNT_JSON
     scripts:
+      # الخطوة الجديدة: إنشاء ملفات Gradle إذا كانت مفقودة
+      - name: 🔍 إنشاء ملفات Gradle (إذا لم تكن موجودة)
+        script: |
+          if [ ! -f "android/gradlew" ]; then
+            echo "⚠️ ملفات Gradle مفقودة! جاري إنشاؤها..."
+            flutter create --platforms android .
+            chmod +x android/gradlew  # منح صلاحيات التنفيذ
+            echo "✅ تم إنشاء ملفات Gradle بنجاح!"
+          else
+            echo "✔️ ملفات Gradle موجودة بالفعل."
+          fi
+
       - name: 🛠️ إعداد البيئة
         script: |
           flutter version $FLUTTER_VERSION
           flutter doctor -v
-          npm install -g firebase-tools@latest --force
+          npm install -g firebase-tools@latest --unsafe-perm
+
+      - name: 📜 تفعيل تراخيص Android
+        script: |
+          yes | sdkmanager --licenses || true
+          flutter doctor --android-licenses
 
       - name: 🧹 تنظيف المشروع
         script: |
@@ -23,19 +40,24 @@ workflows:
       - name: 🔄 تحديث التبعيات
         script: |
           flutter pub get
-          cd android && ./gradlew clean
+          ./android/gradlew clean -p android  # المسار الكامل لتجنب الأخطاء
 
       - name: 🏗️ بناء APK
         script: |
+          set -e  # إيقاف البرنامج عند أي خطأ
           flutter build apk --release \
             --dart-define=FIREBASE_API_KEY=$FIREBASE_API_KEY \
             --dart-define=FIREBASE_APP_ID=$FIREBASE_APP_ID \
             --split-debug-info=./debug_info \
             --verbose
 
-          if [ ! -f "build/app/outputs/flutter-apk/app-release.apk" ]; then
-            echo "❌ فشل البناء - لم يتم إنشاء APK"
-            ls -la build/app/outputs/
+          APK_PATH="build/app/outputs/flutter-apk/app-release.apk"
+          if [ -f "$APK_PATH" ]; then
+            echo "✅ تم بناء APK بنجاح!"
+            ls -la build/app/outputs/flutter-apk/
+          else
+            echo "❌ فشل البناء! لم يتم إنشاء APK"
+            find . -name "*.apk"  # البحث عن أي APK في المشروع
             exit 1
           fi
 
@@ -55,9 +77,6 @@ workflows:
       email:
         recipients:
           - "your.email@example.com"
-        notify:
-          success: true
-          failure: true
     cache:
       cache_paths:
         - ~/.gradle/caches

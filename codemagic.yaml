@@ -8,7 +8,17 @@ workflows:
         FIREBASE_APP_ID: $FIREBASE_APP_ID
         FIREBASE_SERVICE_ACCOUNT_JSON: $FIREBASE_SERVICE_ACCOUNT_JSON
     scripts:
-      # الخطوة 1: إنشاء ملفات Gradle إذا كانت مفقودة
+      # الخطوة 1: تثبيت إصدار Flutter المحدد
+      - name: ⬇️ تثبيت Flutter
+        script: |
+          FLUTTER_HOME="$HOME/programs/flutter"
+          if [ ! -d "$FLUTTER_HOME" ]; then
+            git clone https://github.com/flutter/flutter.git -b stable $FLUTTER_HOME
+          fi
+          export PATH="$FLUTTER_HOME/bin:$PATH"
+          flutter doctor -v
+
+      # الخطوة 2: إنشاء ملفات Gradle إذا كانت مفقودة
       - name: 🔍 إنشاء ملفات Gradle
         script: |
           if [ ! -f "android/gradlew" ]; then
@@ -20,12 +30,9 @@ workflows:
             echo "✔️ ملفات Gradle موجودة بالفعل."
           fi
 
-      # الخطوة 2: إعداد البيئة
+      # الخطوة 3: إعداد البيئة
       - name: 🛠️ إعداد البيئة
         script: |
-          flutter version $FLUTTER_VERSION
-          flutter doctor -v
-          
           # حل مشكلة تثبيت firebase-tools إذا كان موجوداً مسبقاً
           if [ -f "/usr/local/bin/firebase" ]; then
             echo "⚠️ حذف إصدار firebase-tools القديم..."
@@ -33,13 +40,13 @@ workflows:
           fi
           npm install -g firebase-tools@latest --force --unsafe-perm
 
-      # الخطوة 3: تفعيل التراخيص
+      # الخطوة 4: تفعيل التراخيص
       - name: 📜 تفعيل تراخيص Android
         script: |
           yes | sdkmanager --licenses || true
           flutter doctor --android-licenses
 
-      # الخطوة 4: تنظيف المشروع
+      # الخطوة 5: تنظيف المشروع
       - name: 🧹 تنظيف المشروع
         script: |
           flutter clean
@@ -48,28 +55,28 @@ workflows:
           rm -rf android/.gradle
           rm -rf android/build
 
-      # الخطوة 5: إصلاح ملفات Gradle
+      # الخطوة 6: إصلاح ملفات البناء
       - name: 🔧 إصلاح ملفات البناء
         script: |
           # إصلاح ملف android/app/build.gradle
           sed -i '' '/android()/d' android/app/build.gradle
           
-          # تحديث إصدارات SDK في ملف android/app/build.gradle
+          # تحديث إصدارات SDK
           sed -i '' 's/compileSdkVersion [0-9]*/compileSdkVersion 34/g' android/app/build.gradle
           sed -i '' 's/targetSdkVersion [0-9]*/targetSdkVersion 34/g' android/app/build.gradle
           sed -i '' 's/minSdkVersion [0-9]*/minSdkVersion 21/g' android/app/build.gradle
           
-          # تحديث إصدار Gradle في android/build.gradle
+          # تحديث إصدار Gradle
           sed -i '' 's/com.android.tools.build:gradle:[0-9\.]*/com.android.tools.build:gradle:7.3.0/g' android/build.gradle
 
-      # الخطوة 6: تحديث التبعيات
+      # الخطوة 7: تحديث التبعيات
       - name: 🔄 تحديث التبعيات
         script: |
           flutter pub get
           ./android/gradlew clean -p android
 
-      # الخطوة 7: بناء APK
-      - name: 🏗️ بناء APK
+      # الخطوة 8: بناء APK
+      - name: �️ بناء APK
         script: |
           set -e
           flutter build apk --release \
@@ -88,7 +95,7 @@ workflows:
             exit 1
           fi
 
-      # الخطوة 8: النشر على Firebase
+      # الخطوة 9: النشر على Firebase
       - name: 📤 نشر على Firebase
         script: |
           echo "$FIREBASE_SERVICE_ACCOUNT_JSON" > /tmp/service-account.json

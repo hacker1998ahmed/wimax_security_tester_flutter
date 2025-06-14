@@ -18,45 +18,122 @@ workflows:
           export PATH="$FLUTTER_HOME/bin:$PATH"
           flutter doctor -v
 
-      # الخطوة 2: التحقق من إعدادات Android
-      - name: 🔍 فحص إعدادات Android
+      # الخطوة 2: تحديث ملفات البناء
+      - name: 🔧 تحديث ملفات البناء
         script: |
-          # التحقق من وجود MainActivity.kt (V2 Embedding)
-          if [ ! -f "android/app/src/main/kotlin/com/example/wimax_security_tester/MainActivity.kt" ]; then
-            echo "⚠️ جاري تحديث إعدادات Android إلى V2 Embedding..."
+          # إنشاء ملفات البناء إذا كانت مفقودة
+          if [ ! -f "android/build.gradle" ]; then
             flutter create --platforms android .
           fi
 
-      # الخطوة 3: إصلاح ملفات البناء
-      - name: 🔧 إصلاح ملفات البناء
-        script: |
-          # تحديث ملف MainActivity.kt
-          cat <<EOT > android/app/src/main/kotlin/com/example/wimax_security_tester/MainActivity.kt
-          package com.example.wimax_security_tester
+          # تحديث android/build.gradle
+          cat <<EOT > android/build.gradle
+          buildscript {
+              ext.kotlin_version = '1.9.22'
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+              dependencies {
+                  classpath 'com.android.tools.build:gradle:7.3.0'
+                  classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:\$kotlin_version"
+              }
+          }
 
-          import io.flutter.embedding.android.FlutterActivity
+          allprojects {
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+          }
 
-          class MainActivity: FlutterActivity() {
+          task clean(type: Delete) {
+              delete rootProject.buildDir
           }
           EOT
 
-          # تحديث build.gradle
-          sed -i '' 's/minSdkVersion [0-9]*/minSdkVersion 21/g' android/app/build.gradle
-          sed -i '' 's/targetSdkVersion [0-9]*/targetSdkVersion 34/g' android/app/build.gradle
-          sed -i '' 's/compileSdkVersion [0-9]*/compileSdkVersion 34/g' android/app/build.gradle
+          # تحديث android/app/build.gradle
+          cat <<EOT > android/app/build.gradle
+          plugins {
+              id "com.android.application"
+              id "kotlin-android"
+              id "dev.flutter.flutter-gradle-plugin"
+          }
 
-      # الخطوة 4: إعداد البيئة
+          def localProperties = new Properties()
+          def localPropertiesFile = rootProject.file('local.properties')
+          if (localPropertiesFile.exists()) {
+              localPropertiesFile.withReader('UTF-8') { reader ->
+                  localProperties.load(reader)
+              }
+          }
+
+          def flutterRoot = localProperties.getProperty('flutter.sdk')
+          if (flutterRoot == null) {
+              throw new GradleException("Flutter SDK not found. Define location with flutter.sdk in local.properties.")
+          }
+
+          android {
+              compileSdkVersion 34
+              ndkVersion flutter.ndkVersion
+
+              compileOptions {
+                  sourceCompatibility JavaVersion.VERSION_17
+                  targetCompatibility JavaVersion.VERSION_17
+              }
+
+              kotlinOptions {
+                  jvmTarget = '17'
+              }
+
+              sourceSets {
+                  main.java.srcDirs += 'src/main/kotlin'
+              }
+
+              defaultConfig {
+                  applicationId "com.example.wimax_security_tester"
+                  minSdkVersion 21
+                  targetSdkVersion 34
+                  versionCode 1
+                  versionName "1.0"
+              }
+
+              buildTypes {
+                  release {
+                      signingConfig signingConfigs.debug
+                      minifyEnabled true
+                      shrinkResources true
+                      proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+                  }
+              }
+          }
+
+          flutter {
+              source '../..'
+          }
+
+          dependencies {
+              implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:\$kotlin_version"
+          }
+          EOT
+
+          # إزالة إعداد R8 من gradle.properties إذا وجد
+          if [ -f "android/gradle.properties" ]; then
+              sed -i '' '/android.enableR8/d' android/gradle.properties
+          fi
+
+      # الخطوة 3: إعداد البيئة
       - name: 🛠️ إعداد البيئة
         script: |
           npm install -g firebase-tools@latest --force --unsafe-perm
 
-      # الخطوة 5: تحديث التبعيات
+      # الخطوة 4: تحديث التبعيات
       - name: 🔄 تحديث التبعيات
         script: |
           flutter pub get
           ./android/gradlew clean -p android
 
-      # الخطوة 6: بناء APK
+      # الخطوة 5: بناء APK
       - name: 🏗️ بناء APK
         script: |
           set -e
@@ -71,7 +148,7 @@ workflows:
             exit 1
           fi
 
-      # الخطوة 7: النشر على Firebase
+      # الخطوة 6: النشر على Firebase
       - name: 📤 نشر على Firebase
         script: |
           echo "$FIREBASE_SERVICE_ACCOUNT_JSON" > /tmp/service-account.json

@@ -1,35 +1,19 @@
-# Keystore Files
-/android/app/keystore/
-/android/key.properties
-/android/app/google-services.json
+## Flutter Properties
+flutter.versionCode=1
+flutter.versionName=1.0.0
 
-# Flutter & Dart
-/Flutter/
-/.dart_tool/
-/.packages
-/.flutter-plugins
-/.flutter-plugins-dependencies
-.pub-cache/
+## Android Build Properties
+org.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=1g -XX:+HeapDumpOnOutOfMemoryError -Dfile.encoding=UTF-8
+android.enableR8=true
+android.useAndroidX=true
+android.enableJetifier=true
 
-# Android
-/android/.gradle/
-/android/local.properties
-/android/**/GeneratedPluginRegistrant.java
+## Performance Flags
+org.gradle.parallel=true
+org.gradle.caching=true
+org.gradle.daemon=true
+org.gradle.configureondemand=true
 
-# iOS
-/ios/.generated/
-/ios/Flutter/App.framework
-/ios/Flutter/Flutter.podspec
-/ios/Pods/
-
-# Builds
-/build/
-/android/app/build/
-/ios/DerivedData/
-
-# IDE
-.vscode/
-.idea/
-*.iml
-*.swp
-.DS_Store
+## Kotlin Properties
+kotlin.code.style=official
+kotlin.incremental=true

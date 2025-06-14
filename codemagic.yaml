@@ -18,34 +18,32 @@ workflows:
           export PATH="$FLUTTER_HOME/bin:$PATH"
           flutter doctor -v
 
-      # الخطوة 2: إنشاء ملفات Gradle إذا كانت مفقودة
-      - name: 🔍 إنشاء ملفات Gradle
+      # الخطوة 2: التحقق من إعدادات Android
+      - name: 🔍 فحص إعدادات Android
         script: |
-          if [ ! -f "android/gradlew" ]; then
-            echo "⚠️ جاري إنشاء ملفات Gradle الأساسية..."
-            mkdir -p android
-            cd android
-            gradle wrapper --gradle-version 7.5
-            cd ..
-            chmod +x android/gradlew
-            echo "✅ تم إنشاء ملفات Gradle بنجاح!"
-          else
-            echo "✔️ ملفات Gradle موجودة بالفعل."
+          # التحقق من وجود MainActivity.kt (V2 Embedding)
+          if [ ! -f "android/app/src/main/kotlin/com/example/wimax_security_tester/MainActivity.kt" ]; then
+            echo "⚠️ جاري تحديث إعدادات Android إلى V2 Embedding..."
+            flutter create --platforms android .
           fi
 
       # الخطوة 3: إصلاح ملفات البناء
       - name: 🔧 إصلاح ملفات البناء
         script: |
-          # إنشاء ملفات البناء إذا لم تكن موجودة
-          if [ ! -f "android/build.gradle" ]; then
-            flutter create --platforms android .
-          fi
+          # تحديث ملف MainActivity.kt
+          cat <<EOT > android/app/src/main/kotlin/com/example/wimax_security_tester/MainActivity.kt
+          package com.example.wimax_security_tester
 
-          # تحديث إعدادات Gradle
-          sed -i '' 's/com.android.tools.build:gradle:[0-9\.]*/com.android.tools.build:gradle:7.3.0/g' android/build.gradle
-          sed -i '' 's/compileSdkVersion [0-9]*/compileSdkVersion 34/g' android/app/build.gradle
-          sed -i '' 's/targetSdkVersion [0-9]*/targetSdkVersion 34/g' android/app/build.gradle
+          import io.flutter.embedding.android.FlutterActivity
+
+          class MainActivity: FlutterActivity() {
+          }
+          EOT
+
+          # تحديث build.gradle
           sed -i '' 's/minSdkVersion [0-9]*/minSdkVersion 21/g' android/app/build.gradle
+          sed -i '' 's/targetSdkVersion [0-9]*/targetSdkVersion 34/g' android/app/build.gradle
+          sed -i '' 's/compileSdkVersion [0-9]*/compileSdkVersion 34/g' android/app/build.gradle
 
       # الخطوة 4: إعداد البيئة
       - name: 🛠️ إعداد البيئة
@@ -56,15 +54,7 @@ workflows:
       - name: 🔄 تحديث التبعيات
         script: |
           flutter pub get
-          
-          # التحقق من وجود gradlew ومنح صلاحيات التنفيذ
-          if [ -f "android/gradlew" ]; then
-            chmod +x android/gradlew
-            ./android/gradlew clean -p android
-          else
-            echo "❌ ملف gradlew غير موجود!"
-            exit 1
-          fi
+          ./android/gradlew clean -p android
 
       # الخطوة 6: بناء APK
       - name: 🏗️ بناء APK

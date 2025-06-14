@@ -5,6 +5,15 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
+    defaultConfig {
+        applicationId "com.example.wimax" // استبدل باسم حزمة تطبيقك
+        minSdkVersion 19 // تم التحديث من 16 إلى 19
+        targetSdkVersion 34
+        versionCode 1
+        versionName "1.0.0"
+        multiDexEnabled true
+    }
+
     signingConfigs {
         release {
             keyAlias keystoreProperties['keyAlias']
@@ -13,6 +22,7 @@ android {
             storePassword keystoreProperties['storePassword']
         }
     }
+
     buildTypes {
         release {
             signingConfig signingConfigs.release
@@ -21,12 +31,12 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
         debug {
-            signingConfig signingConfigs.release // للتوقيع أثناء التطوير أيضاً
+            signingConfig signingConfigs.release
         }
     }
-    defaultConfig {
-        minSdkVersion 19 // يجب أن يكون 19 أو أعلى
-        targetSdkVersion 34
-        multiDexEnabled true
+
+    // إضافة هذه السطور لمنع مشكلة 64k method limit
+    dexOptions {
+        javaMaxHeapSize "4g"
     }
 }

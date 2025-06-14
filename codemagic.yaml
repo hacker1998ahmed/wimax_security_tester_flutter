@@ -1,6 +1,6 @@
 workflows:
   android_production:
-    name: � Android Production Build
+    name: 🚀 Android Production Build
     environment:
       vars:
         FLUTTER_VERSION: "3.22.2"
@@ -8,43 +8,54 @@ workflows:
         FIREBASE_APP_ID: $FIREBASE_APP_ID
         FIREBASE_SERVICE_ACCOUNT_JSON: $FIREBASE_SERVICE_ACCOUNT_JSON
     scripts:
-      # الخطوة الجديدة: إنشاء ملفات Gradle إذا كانت مفقودة
-      - name: 🔍 إنشاء ملفات Gradle (إذا لم تكن موجودة)
+      # الخطوة 1: إنشاء ملفات Gradle إذا كانت مفقودة
+      - name: 🔍 إنشاء ملفات Gradle
         script: |
           if [ ! -f "android/gradlew" ]; then
-            echo "⚠️ ملفات Gradle مفقودة! جاري إنشاؤها..."
+            echo "⚠️ جاري إنشاء ملفات Gradle..."
             flutter create --platforms android .
-            chmod +x android/gradlew  # منح صلاحيات التنفيذ
+            chmod +x android/gradlew
             echo "✅ تم إنشاء ملفات Gradle بنجاح!"
           else
             echo "✔️ ملفات Gradle موجودة بالفعل."
           fi
 
+      # الخطوة 2: إعداد البيئة مع معالجة خطأ firebase-tools
       - name: 🛠️ إعداد البيئة
         script: |
           flutter version $FLUTTER_VERSION
           flutter doctor -v
-          npm install -g firebase-tools@latest --unsafe-perm
+          
+          # حل مشكلة تثبيت firebase-tools إذا كان موجوداً مسبقاً
+          if [ -f "/usr/local/bin/firebase" ]; then
+            echo "⚠️ حذف إصدار firebase-tools القديم..."
+            rm -f /usr/local/bin/firebase
+          fi
+          npm install -g firebase-tools@latest --force --unsafe-perm
 
+      # الخطوة 3: تفعيل التراخيص
       - name: 📜 تفعيل تراخيص Android
         script: |
           yes | sdkmanager --licenses || true
           flutter doctor --android-licenses
 
+      # الخطوة 4: تنظيف المشروع
       - name: 🧹 تنظيف المشروع
         script: |
           flutter clean
           rm -rf android/app/src/main/java/io/flutter/plugins/
           rm -rf android/app/src/main/kotlin/io/flutter/
 
+      # الخطوة 5: تحديث التبعيات
       - name: 🔄 تحديث التبعيات
         script: |
           flutter pub get
-          ./android/gradlew clean -p android  # المسار الكامل لتجنب الأخطاء
+          ./android/gradlew clean -p android
 
+      # الخطوة 6: بناء APK
       - name: 🏗️ بناء APK
         script: |
-          set -e  # إيقاف البرنامج عند أي خطأ
+          set -e
           flutter build apk --release \
             --dart-define=FIREBASE_API_KEY=$FIREBASE_API_KEY \
             --dart-define=FIREBASE_APP_ID=$FIREBASE_APP_ID \
@@ -56,11 +67,12 @@ workflows:
             echo "✅ تم بناء APK بنجاح!"
             ls -la build/app/outputs/flutter-apk/
           else
-            echo "❌ فشل البناء! لم يتم إنشاء APK"
-            find . -name "*.apk"  # البحث عن أي APK في المشروع
+            echo "❌ فشل البناء!"
+            find . -name "*.apk"
             exit 1
           fi
 
+      # الخطوة 7: النشر على Firebase
       - name: 📤 نشر على Firebase
         script: |
           echo "$FIREBASE_SERVICE_ACCOUNT_JSON" > /tmp/service-account.json

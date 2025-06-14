@@ -1,48 +1,109 @@
+# ==============================================
+# WiMax Pentest Tool - Secure Build Configuration
+# ==============================================
+
 workflows:
-  secure_release:
-    name: Secure Release Build
+  production:
+    name: Production Build
     environment:
       groups:
         - signing_credentials
+        - firebase_config
       vars:
-        FCI_KEYSTORE_PATH: "android/app/keystore/keystore.jks"  # سيتم إنشاؤه
+        FCI_KEYSTORE_PATH: "android/app/keystore/release.keystore"
+        FCI_BUILD_NDK_VERSION: "25.1.8937393"  # تحديد إصدار NDK
     triggering:
+      events:
+        - push
       branch_patterns:
         - pattern: main
           include: true
     scripts:
-      - name: Setup Keystore from Env
+      # ======================
+      # Security Setup Phase
+      # ======================
+      - name: Setup Secure Environment
         script: |
+          # إنشاء مجلد Keystore
           mkdir -p android/app/keystore
-          echo $FCI_KEYSTORE | base64 --decode > $FCI_KEYSTORE_PATH
+          
+          # فك تشفير Keystore من متغير البيئة
+          echo $ENCODED_KEYSTORE | base64 --decode > $FCI_KEYSTORE_PATH
+          
+          # ضبط أذونات الملف
           chmod 600 $FCI_KEYSTORE_PATH
           
-          # التحقق من صحة الملف
+          # التحقق من صحة Keystore
           keytool -list -v \
             -keystore $FCI_KEYSTORE_PATH \
-            -storepass $KEYSTORE_PASSWORD \
+            -storepass $STORE_PASS \
             -alias $KEY_ALIAS || {
               echo "❌ Keystore validation failed";
               exit 1;
             }
 
-      - name: Build App Bundle
+      # ======================
+      # Build Phase
+      # ======================
+      - name: Install Dependencies
         script: |
           flutter pub get
+          flutter pub run build_runner build --delete-conflicting-outputs
+
+      - name: Build Android App Bundle
+        script: |
           flutter build appbundle --release \
             --dart-define=FIREBASE_API_KEY=$FIREBASE_API_KEY \
-            --dart-define=FIREBASE_APP_ID=$FIREBASE_APP_ID
+            --dart-define=FIREBASE_APP_ID=$FIREBASE_APP_ID \
+            --obfuscate \
+            --split-debug-info=./debug-info
 
-      - name: Cleanup Keystore
+      # ======================
+      # Post-Build Security
+      # ======================
+      - name: Secure Cleanup
         script: |
-          rm -f $FCI_KEYSTORE_PATH
-          echo "🔒 Keystore removed successfully"
+          # حذف آمن للملفات الحساسة
+          shred -u $FCI_KEYSTORE_PATH
+          rm -rf ./debug-info/*.symbols
+          
+          # تنظيف الذاكرة المؤقتة
+          flutter clean
+          
+          echo "🔒 All sensitive files destroyed"
+
     artifacts:
       - build/app/outputs/bundle/release/*.aab
+      - build/app/outputs/mapping/release/mapping.txt
+      - debug-info/
+
     publishing:
       google_play:
-        credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
-        track: internal
+        credentials: $GCLOUD_SERVICE_ACCOUNT_JSON
+        track: production
+      firebase:
+        credentials: $FIREBASE_SERVICE_ACCOUNT_JSON
+        channel: live
       email:
         recipients:
-          - your.email@example.com
+          - dev-team@yourcompany.com
+        notify:
+          success: true
+          failure: true
+
+# ===========================
+# Environment Specifications
+# ===========================
+environment:
+  flutter: "3.19.5"  # تحديد إصدار Flutter
+  xcode: "15.2"      # لإعدادات iOS المستقبلية
+  ndk: "25.1.8937393"
+
+# ======================
+# Notifications
+# ======================
+notification:
+  slack:
+    - $SLACK_CHANNEL_ID
+  teams:
+    - $TEAMS_WEBHOOK_URL

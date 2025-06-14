@@ -1,48 +1,82 @@
 workflows:
-  secure_release:
-    name: Secure Release Build
+  android_production:
+    name: 🚀 Android Production Build
     environment:
-      groups:
-        - signing_credentials
       vars:
-        FCI_KEYSTORE_PATH: "android/app/keystore/keystore.jks"  # سيتم إنشاؤه
+        FLUTTER_VERSION: "3.19.5"
+        # تعريف متغيرات Firebase مباشرة (بدلاً من المجموعات)
+        FIREBASE_API_KEY: $FIREBASE_API_KEY
+        FIREBASE_APP_ID: $FIREBASE_APP_ID
+        FIREBASE_SERVICE_ACCOUNT_JSON: $FIREBASE_SERVICE_ACCOUNT_JSON
     triggering:
+      events: [push]
       branch_patterns:
         - pattern: main
           include: true
     scripts:
-      - name: Setup Keystore from Env
+      # ===================================
+      # 1. إعداد البيئة الأساسية
+      # ===================================
+      - name: 🛠️ إعداد البيئة
         script: |
-          mkdir -p android/app/keystore
-          echo $FCI_KEYSTORE | base64 --decode > $FCI_KEYSTORE_PATH
-          chmod 600 $FCI_KEYSTORE_PATH
+          flutter version $FLUTTER_VERSION
+          flutter doctor -v
           
-          # التحقق من صحة الملف
-          keytool -list -v \
-            -keystore $FCI_KEYSTORE_PATH \
-            -storepass $KEYSTORE_PASSWORD \
-            -alias $KEY_ALIAS || {
-              echo "❌ Keystore validation failed";
-              exit 1;
-            }
+          # حل جذري لمشكلة Firebase CLI
+          npm config set prefix ~/.npm-global
+          echo 'export PATH=~/.npm-global/bin:$PATH' >> ~/.bashrc
+          source ~/.bashrc
+          npm install -g firebase-tools@latest --force
+          firebase --version
 
-      - name: Build App Bundle
+      # ===================================
+      # 2. بناء APK بدون توقيع
+      # ===================================
+      - name: 🏗️ بناء APK
         script: |
+          flutter clean
           flutter pub get
-          flutter build appbundle --release \
+          flutter build apk --release \
             --dart-define=FIREBASE_API_KEY=$FIREBASE_API_KEY \
-            --dart-define=FIREBASE_APP_ID=$FIREBASE_APP_ID
+            --dart-define=FIREBASE_APP_ID=$FIREBASE_APP_ID \
+            --split-debug-info=./debug_info
+          
+          # التحقق من المخرجات
+          ls -la build/app/outputs/flutter-apk/
+          APK_PATH="build/app/outputs/flutter-apk/app-release.apk"
+          if [ -f "$APK_PATH" ]; then
+            echo "✔ تم البناء بنجاح! حجم الملف:"
+            du -h "$APK_PATH"
+          else
+            echo "❌ فشل في إنشاء ملف APK"
+            exit 1
+          fi
 
-      - name: Cleanup Keystore
+      # ===================================
+      # 3. النشر على Firebase
+      # ===================================
+      - name: 📤 نشر على Firebase
         script: |
-          rm -f $FCI_KEYSTORE_PATH
-          echo "🔒 Keystore removed successfully"
+          # إنشاء ملف Service Account مؤقت
+          echo "$FIREBASE_SERVICE_ACCOUNT_JSON" > /tmp/service-account.json
+          
+          firebase appdistribution:distribute \
+            build/app/outputs/flutter-apk/app-release.apk \
+            --app $FIREBASE_APP_ID \
+            --service-account-json /tmp/service-account.json \
+            --groups "testers" \
+            --debug
     artifacts:
-      - build/app/outputs/bundle/release/*.aab
+      - build/app/outputs/flutter-apk/*.apk
+      - debug_info/**
     publishing:
-      google_play:
-        credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
-        track: internal
       email:
         recipients:
-          - your.email@example.com
+          - "your-email@example.com" # ⚠️ استبدل بريدك الفعلي
+        notify:
+          success: true
+          failure: true
+    cache:
+      cache_paths:
+        - ~/.gradle/caches
+        - ~/.pub-cache

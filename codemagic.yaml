@@ -3,32 +3,37 @@ workflows:
     name: 🚀 Android Production Build
     environment:
       vars:
-        FLUTTER_VERSION: "3.19.5"
+        FLUTTER_VERSION: "3.22.2"  # استخدام أحدث إصدار مستقر
         FIREBASE_API_KEY: $FIREBASE_API_KEY
         FIREBASE_APP_ID: $FIREBASE_APP_ID
         FIREBASE_SERVICE_ACCOUNT_JSON: $FIREBASE_SERVICE_ACCOUNT_JSON
     scripts:
-      - name: 🧹 تنظيف المشروع
+      - name: 🧹 تنظيف شامل
         script: |
           flutter clean
-          rm -rf android/app/src/main/java/io/flutter/
-          rm -rf android/app/src/main/kotlin/
+          rm -rf android/
+          rm -rf ios/
+          rm -rf .flutter-plugins
+          rm -rf .flutter-plugins-dependencies
 
-      - name: 🛠️ إعداد البيئة
+      - name: 🛠️ إعداد البيئة من الصفر
         script: |
           flutter version $FLUTTER_VERSION
           flutter doctor -v
+          
+          # إعادة إنشاء المشروع بالكامل
+          flutter create --platforms android --org com.yourcompany .
+          
           flutter pub get
           npm install -g firebase-tools@latest --force
 
-      - name: 🔄 إعادة إنشاء الهيكل
+      - name: 🔄 تحديث التبعيات
         script: |
-          flutter create --platforms android --org com.yourcompany .
+          flutter pub upgrade --major-versions
+          cd android && ./gradlew clean
 
-      - name: 🏗️ بناء APK
+      - name: 🏗️ بناء APK نهائي
         script: |
-          flutter clean
-          flutter pub get
           flutter build apk --release \
             --dart-define=FIREBASE_API_KEY=$FIREBASE_API_KEY \
             --dart-define=FIREBASE_APP_ID=$FIREBASE_APP_ID \
@@ -36,8 +41,12 @@ workflows:
           
           if [ ! -f "build/app/outputs/flutter-apk/app-release.apk" ]; then
             echo "❌ فشل البناء - لم يتم إنشاء APK"
-            ls -la build/app/outputs/
+            echo "🔍 محتويات مجلد البناء:"
+            ls -la build/app/outputs/ || true
             exit 1
+          else
+            echo "✔ تم البناء بنجاح!"
+            du -h build/app/outputs/flutter-apk/app-release.apk
           fi
 
       - name: 📤 نشر على Firebase
@@ -54,4 +63,7 @@ workflows:
     publishing:
       email:
         recipients:
-          - "your.email@example.com"
+          - "gogom8870@gmail.com"
+        notify:
+          success: true
+          failure: true

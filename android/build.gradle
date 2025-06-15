@@ -1,21 +1,18 @@
 buildscript {
     ext {
-        kotlin_version = '1.7.20'
-        flutterVersion = '3.32.4'
+        kotlin_version = '1.7.20' // يجب أن يتوافق مع KOTLIN_VERSION في البيئة
     }
     repositories {
         google()
         mavenCentral()
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:7.4.2'
+        classpath 'com.android.tools.build:gradle:7.4.2' // متوافق مع Gradle 7.5
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
     }
 }
 
-plugins {
-    id "dev.flutter.flutter-gradle-plugin" version "3.32.4" apply false
-}
+// أزل تعريف plugin من هنا وأضفه في android/app/build.gradle بدلاً من ذلك
 
 allprojects {
     repositories {

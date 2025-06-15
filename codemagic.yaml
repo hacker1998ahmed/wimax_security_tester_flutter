@@ -13,28 +13,23 @@ workflows:
           rm -rf android/.gradle
           rm -rf ~/.gradle/caches
 
-      - name: Setup Gradle
+      - name: Setup Flutter
         script: |
-          echo "=== إعداد Gradle ==="
-          cd android
-          chmod +x gradlew
-          ./gradlew --stop || true
-          ./gradlew clean
-          cd ..
-
-      - name: Install Dependencies
-        script: |
-          echo "=== تثبيت التبعيات ==="
+          echo "=== إعداد Flutter ==="
+          flutter channel stable
+          flutter upgrade --force
           flutter pub get
 
       - name: Build APK
         script: |
           echo "=== بناء APK ==="
+          cd android
+          ./gradlew clean
+          cd ..
           flutter build apk --release --no-shrink
 
     artifacts:
       - build/app/outputs/flutter-apk/app-release.apk
-
     publishing:
       email:
         recipients:

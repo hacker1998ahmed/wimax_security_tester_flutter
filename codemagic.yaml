@@ -13,20 +13,20 @@ workflows:
           rm -rf android/.gradle
           rm -rf ~/.gradle/caches
 
+      - name: Fix Gradle Files
+        script: |
+          echo "=== إصلاح ملفات Gradle ==="
+          cd android
+          # تأكد من حذف ملف الإعدادات القديم إن وجد
+          rm -f settings.gradle.kts
+          # منح صلاحيات تنفيذ لـ gradlew
+          chmod +x gradlew
+          cd ..
+
       - name: Setup Flutter
         script: |
           echo "=== إعداد Flutter ==="
-          flutter channel stable
-          flutter upgrade --force
           flutter pub get
-
-      - name: Prepare Gradle
-        script: |
-          echo "=== تحضير Gradle ==="
-          cd android
-          chmod +x gradlew
-          ./gradlew --stop || true
-          cd ..
 
       - name: Build APK
         script: |

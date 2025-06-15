@@ -13,15 +13,17 @@ workflows:
           rm -rf android/.gradle
           rm -rf ~/.gradle/caches
 
-      - name: Fix Gradle Files
+      - name: Verify Project Structure
         script: |
-          echo "=== إصلاح ملفات Gradle ==="
-          cd android
-          # تأكد من حذف ملف الإعدادات القديم إن وجد
-          rm -f settings.gradle.kts
-          # منح صلاحيات تنفيذ لـ gradlew
-          chmod +x gradlew
-          cd ..
+          echo "=== التحقق من هيكل المشروع ==="
+          if [ ! -d "android/app" ]; then
+            echo "خطأ: مجلد android/app غير موجود!"
+            exit 1
+          fi
+          if [ ! -f "android/settings.gradle" ]; then
+            echo "إنشاء ملف settings.gradle جديد"
+            echo "include ':app'" > android/settings.gradle
+          fi
 
       - name: Setup Flutter
         script: |
@@ -31,6 +33,10 @@ workflows:
       - name: Build APK
         script: |
           echo "=== بناء APK ==="
+          cd android
+          chmod +x gradlew
+          ./gradlew clean
+          cd ..
           flutter build apk --release --no-shrink
 
     artifacts:

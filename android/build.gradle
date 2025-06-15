@@ -1,20 +1,20 @@
 buildscript {
     ext {
-        kotlin_version = '1.9.22'
-        flutterVersion = '2.3.0'
+        kotlin_version = '1.9.22'  // تحديث للإصدار الأحدث
+        flutterVersion = '3.32.4'  // نفس إصدار Flutter المستخدم
     }
     repositories {
         google()
         mavenCentral()
     }
     dependencies {
-    classpath 'com.android.tools.build:gradle:7.5.0' // تأكد من توافقه مع Gradle 7.5
-    classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:1.7.20"
+        classpath 'com.android.tools.build:gradle:8.1.0'  // مطابق لـ Gradle 8.1
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
     }
 }
 
 plugins {
-    id "dev.flutter.flutter-gradle-plugin" version "$flutterVersion" apply false
+    id "dev.flutter.flutter-gradle-plugin" version "3.32.4" apply false
 }
 
 allprojects {

@@ -1,0 +1,46 @@
+name: wimax_security_tester
+description: A security testing app for WiMAX networks.
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+  flutter: '>=3.22.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.6
+
+  # State Management
+  bloc: ^9.0.0
+  flutter_bloc: ^9.1.1
+
+  # Firebase
+  firebase_core: ^3.14.0
+  firebase_analytics: ^11.5.0
+  firebase_crashlytics: ^4.3.7
+
+  # Network & Connectivity
+  connectivity_plus: ^6.1.4
+  http: ^1.2.1
+
+  # UI & Utilities
+  material_color_utilities: ^0.13.0
+  flutter_svg: ^2.0.10+1
+
+  # Security Testing
+  network_tools: ^1.0.0
+  ping_discover_network: ^2.0.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  bloc_test: ^9.1.0
+  mockito: ^5.4.2
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/

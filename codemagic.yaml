@@ -4,8 +4,8 @@ workflows:
     environment:
       vars:
         FLUTTER_VERSION: "3.32.4"
-        GRADLE_VERSION: "7.6"  # تم التغيير إلى إصدار أقدم وأكثر استقراراً
-        KOTLIN_VERSION: "1.7.20"  # معدل ليتوافق مع Gradle 7.6
+        GRADLE_VERSION: "7.5"  # تم التغيير إلى إصدار متوفر
+        KOTLIN_VERSION: "1.7.20"
         FIREBASE_API_KEY: $FIREBASE_API_KEY
         FIREBASE_APP_ID: $FIREBASE_APP_ID
         FIREBASE_SERVICE_ACCOUNT_JSON: $FIREBASE_SERVICE_ACCOUNT_JSON
@@ -19,13 +19,13 @@ workflows:
           export PATH="$FLUTTER_HOME/bin:$PATH"
           flutter doctor -v
 
-      - name: 🛠️ إعداد Gradle (الطريقة التقليدية)
+      - name: 🛠️ إعداد Gradle (الطريقة المؤكدة)
         script: |
           if [ ! -d "android" ]; then
             flutter create --platforms android .
           fi
           
-          # استخدام الطريقة التقليدية بدلاً من plugins block
+          # إنشاء ملف build.gradle المعدل
           echo "buildscript {
             ext {
                 kotlin_version = '$KOTLIN_VERSION'
@@ -33,6 +33,7 @@ workflows:
             repositories {
                 google()
                 mavenCentral()
+                gradlePluginPortal()  # أضيف هذا السطر
             }
             dependencies {
                 classpath 'com.android.tools.build:gradle:$GRADLE_VERSION'
@@ -51,7 +52,12 @@ workflows:
             delete rootProject.buildDir
           }" > android/build.gradle
 
-          echo "distributionUrl=https\://services.gradle.org/distributions/gradle-$GRADLE_VERSION-bin.zip" > android/gradle/wrapper/gradle-wrapper.properties
+          # استخدام توزيعة Gradle مباشرة من services.gradle.org
+          echo "distributionBase=GRADLE_USER_HOME
+          distributionPath=wrapper/dists
+          distributionUrl=https\://services.gradle.org/distributions/gradle-$GRADLE_VERSION-bin.zip
+          zipStoreBase=GRADLE_USER_HOME
+          zipStorePath=wrapper/dists" > android/gradle/wrapper/gradle-wrapper.properties
           
           echo "flutter.sdk=$FLUTTER_HOME" > android/local.properties
           echo "sdk.dir=$ANDROID_SDK_ROOT" >> android/local.properties
@@ -60,7 +66,7 @@ workflows:
       - name: 🔄 تحديث التبعيات
         script: |
           flutter pub get
-          cd android && ./gradlew clean --stacktrace && cd ..
+          cd android && ./gradlew clean --stacktrace --refresh-dependencies && cd ..
 
       - name: 🏗️ بناء APK
         script: |

@@ -1,7 +1,7 @@
 buildscript {
     ext {
-        kotlin_version = '1.9.22'  // أحدث إصدار متوافق
-        flutterVersion = '2.0.0'   // إصدار Flutter Gradle Plugin
+        kotlin_version = '1.9.22'
+        flutterVersion = '2.3.0'  // أحدث إصدار
     }
     repositories {
         google()
@@ -15,16 +15,4 @@ buildscript {
 
 plugins {
     id "dev.flutter.flutter-gradle-plugin" version "$flutterVersion" apply false
-    id "com.android.library" version "8.1.0" apply false
-}
-
-allprojects {
-    repositories {
-        google()
-        mavenCentral()
-    }
-}
-
-task clean(type: Delete) {
-    delete rootProject.buildDir
 }

@@ -17,20 +17,48 @@ workflows:
           rm -rf $FLUTTER_HOME
           git clone https://github.com/flutter/flutter.git -b $FLUTTER_VERSION $FLUTTER_HOME
           export PATH="$FLUTTER_HOME/bin:$PATH"
+          flutter channel stable
           flutter doctor -v
 
-      - name: 🔧 إعداد المشروع
+      - name: 🛠️ إنشاء هيكل Android
         script: |
+          # إنشاء هيكل Android إذا لم يكن موجوداً
+          if [ ! -d "android" ]; then
+            echo "Creating Android project structure..."
+            flutter create --platforms android .
+          fi
+          
+          # إنشاء ملفات Gradle الأساسية إذا لم تكن موجودة
+          if [ ! -f "android/gradle/wrapper/gradle-wrapper.properties" ]; then
+            echo "Generating Gradle wrapper files..."
+            cd android
+            gradle wrapper --gradle-version $GRADLE_VERSION --distribution-type bin
+            cd ..
+          fi
+          
+          # تحديث إصدار Gradle
+          echo "Updating Gradle to version $GRADLE_VERSION..."
+          sed -i '' "s/gradle-.*.zip/gradle-$GRADLE_VERSION-bin.zip/g" android/gradle/wrapper/gradle-wrapper.properties
+          
+          # إنشاء/تحديث local.properties
+          echo "Generating local.properties..."
           echo "flutter.sdk=$FLUTTER_HOME" > android/local.properties
           echo "sdk.dir=$ANDROID_SDK_ROOT" >> android/local.properties
-          sed -i '' "s/gradle-.*.zip/gradle-$GRADLE_VERSION-bin.zip/g" android/gradle-wrapper.properties
+          
+          # منح صلاحيات التنفيذ لملفات Gradle
+          chmod +x android/gradlew
+
+      - name: 🔄 تحديث التبعيات
+        script: |
+          flutter pub get
+          cd android && ./gradlew clean && cd ..
 
       - name: 🏗️ بناء APK
         script: |
-          flutter pub get
           flutter build apk --release \
             --dart-define=FIREBASE_API_KEY=$FIREBASE_API_KEY \
-            --dart-define=FIREBASE_APP_ID=$FIREBASE_APP_ID
+            --dart-define=FIREBASE_APP_ID=$FIREBASE_APP_ID \
+            --verbose
 
       - name: 🚀 النشر على Firebase
         script: |
@@ -43,7 +71,9 @@ workflows:
     
     artifacts:
       - build/app/outputs/**/*.apk
+      - android/gradle/wrapper/gradle-wrapper.properties
     cache:
       cache_paths:
         - ~/.gradle/caches
         - ~/.pub-cache
+        - $FLUTTER_HOME/.pub-cache

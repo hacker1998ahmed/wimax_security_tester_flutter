@@ -6,48 +6,31 @@ workflows:
         FLUTTER_VERSION: "3.32.4"
       flutter: $FLUTTER_VERSION
     scripts:
-      # ========== مرحلة الإعداد ==========
-      - name: Set Up Environment
+      - name: Clean Environment
         script: |
           echo "=== تنظيف البيئة ==="
-          flutter channel stable
-          flutter upgrade --force
           flutter clean
-          
-          echo "=== الانتقال إلى مجلد Android ==="
-          cd android
-          
-          echo "=== تنظيف Gradle ==="
-          rm -rf .gradle
+          rm -rf android/.gradle
           rm -rf ~/.gradle/caches
-          
-          echo "=== إصلاح الأذونات ==="
-          find . -type f -name "*.gradle" -exec chmod 644 {} \;
+
+      - name: Setup Gradle
+        script: |
+          echo "=== إعداد Gradle ==="
+          cd android
           chmod +x gradlew
-          
-          echo "=== إيقاف عمليات Gradle ==="
-          ./gradlew --stop || echo "Gradle stop failed (normal if no daemon was running)"
-          
+          ./gradlew --stop || true
+          ./gradlew clean
           cd ..
 
-      # ========== تثبيت التبعيات ==========
       - name: Install Dependencies
         script: |
           echo "=== تثبيت التبعيات ==="
           flutter pub get
-          
-          cd android
-          ./gradlew clean
-          cd ..
 
-      # ========== مرحلة البناء ==========
       - name: Build APK
         script: |
           echo "=== بناء APK ==="
-          flutter build apk --release \
-            --dart-define=FIREBASE_API_KEY=$FIREBASE_API_KEY \
-            --dart-define=FIREBASE_APP_ID=$FIREBASE_APP_ID \
-            --dart-define=FIREBASE_TOKEN=$FIREBASE_TOKEN
+          flutter build apk --release --no-shrink
 
     artifacts:
       - build/app/outputs/flutter-apk/app-release.apk

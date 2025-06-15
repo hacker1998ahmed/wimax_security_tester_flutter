@@ -3,11 +3,9 @@ workflows:
     name: Android Release Workflow
     environment:
       groups:
-        - firebase
+        - secure  # مجموعة المتغيرات السرية التي أنشأتها
       vars:
         FLUTTER_VERSION: "3.32.4"
-        GRADLE_VERSION: "7.5"
-        KOTLIN_VERSION: "1.7.20"
       flutter: $FLUTTER_VERSION
     scripts:
       # ========== مرحلة الإعداد ==========
@@ -42,16 +40,18 @@ workflows:
           echo "=== بناء APK ==="
           flutter build apk --release \
             --dart-define=FIREBASE_API_KEY=$FIREBASE_API_KEY \
-            --dart-define=FIREBASE_APP_ID=$FIREBASE_APP_ID
+            --dart-define=FIREBASE_APP_ID=$FIREBASE_APP_ID \
+            --dart-define=FIREBASE_TOKEN=$FIREBASE_TOKEN
 
-      # ========== النشر ==========
-      - name: Publish to Firebase App Distribution
+      # ========== النشر على Firebase ==========
+      - name: Publish to Firebase
         script: |
           echo "=== النشر على Firebase ==="
           echo $FIREBASE_SERVICE_ACCOUNT_JSON > firebase_credentials.json
           flutter pub run flutterfire_cli distribute \
             --release=build/app/outputs/flutter-apk/app-release.apk \
-            --credentials-file=firebase_credentials.json
+            --credentials-file=firebase_credentials.json \
+            --token $FIREBASE_TOKEN
 
     artifacts:
       - build/app/outputs/flutter-apk/app-release.apk

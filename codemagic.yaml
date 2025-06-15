@@ -21,13 +21,8 @@ workflows:
 
       - name: 🔧 إعداد المشروع
         script: |
-          # إنشاء local.properties إذا لم يكن موجوداً
-          if [ ! -f "android/local.properties" ]; then
-            echo "flutter.sdk=$FLUTTER_HOME" > android/local.properties
-            echo "sdk.dir=/usr/local/share/android-sdk" >> android/local.properties
-          fi
-          
-          # تحديث إصدار Gradle
+          echo "flutter.sdk=$FLUTTER_HOME" > android/local.properties
+          echo "sdk.dir=$ANDROID_SDK_ROOT" >> android/local.properties
           sed -i '' "s/gradle-.*.zip/gradle-$GRADLE_VERSION-bin.zip/g" android/gradle-wrapper.properties
 
       - name: 🏗️ بناء APK
@@ -48,3 +43,7 @@ workflows:
     
     artifacts:
       - build/app/outputs/**/*.apk
+    cache:
+      cache_paths:
+        - ~/.gradle/caches
+        - ~/.pub-cache

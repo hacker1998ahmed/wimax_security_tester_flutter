@@ -22,26 +22,21 @@ workflows:
 
       - name: 🛠️ إنشاء هيكل المشروع
         script: |
-          # إنشاء هيكل Android إذا لم يكن موجوداً
           if [ ! -d "android" ]; then
             flutter create --platforms android .
           fi
           
-          # إنشاء مجلد gradle/wrapper إذا لم يكن موجوداً
           mkdir -p android/gradle/wrapper
           
-          # إنشاء ملف gradle-wrapper.properties كاملاً
-          echo "distributionBase=GRADLE_USER_HOME
-distributionPath=wrapper/dists
-distributionUrl=https\://services.gradle.org/distributions/gradle-$GRADLE_VERSION-bin.zip
-zipStoreBase=GRADLE_USER_HOME
-zipStorePath=wrapper/dists" > android/gradle/wrapper/gradle-wrapper.properties
+          # إنشاء ملف gradle-wrapper.properties مع تنسيق صحيح
+          echo "distributionBase=GRADLE_USER_HOME" > android/gradle/wrapper/gradle-wrapper.properties
+          echo "distributionPath=wrapper/dists" >> android/gradle/wrapper/gradle-wrapper.properties
+          echo "distributionUrl=https\\://services.gradle.org/distributions/gradle-$GRADLE_VERSION-bin.zip" >> android/gradle/wrapper/gradle-wrapper.properties
+          echo "zipStoreBase=GRADLE_USER_HOME" >> android/gradle/wrapper/gradle-wrapper.properties
+          echo "zipStorePath=wrapper/dists" >> android/gradle/wrapper/gradle-wrapper.properties
           
-          # إنشاء ملف local.properties
           echo "flutter.sdk=$FLUTTER_HOME" > android/local.properties
           echo "sdk.dir=$ANDROID_SDK_ROOT" >> android/local.properties
-          
-          # منح صلاحيات التنفيذ
           chmod +x android/gradlew
 
       - name: 🔄 تحديث التبعيات
@@ -67,7 +62,6 @@ zipStorePath=wrapper/dists" > android/gradle/wrapper/gradle-wrapper.properties
     
     artifacts:
       - build/app/outputs/**/*.apk
-      - android/gradle/wrapper/gradle-wrapper.properties
     cache:
       cache_paths:
         - ~/.gradle/caches

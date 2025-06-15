@@ -1,7 +1,6 @@
 buildscript {
     ext {
-        kotlin_version = '1.9.22'
-        flutterVersion = '2.3.0'  // أحدث إصدار
+        kotlin_version = '1.9.22' // تأكد من توافق هذا الإصدار
     }
     repositories {
         google()
@@ -13,6 +12,4 @@ buildscript {
     }
 }
 
-plugins {
-    id "dev.flutter.flutter-gradle-plugin" version "$flutterVersion" apply false
-}
+// أزل تماماً أي إشارة لـ flutter-gradle-plugin من هنا

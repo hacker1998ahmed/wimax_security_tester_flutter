@@ -2,12 +2,14 @@ workflows:
   android_production:
     name: 🚀 Android Production Build
     environment:
-      groups:
-        - firebase  # اسم المجموعة التي أنشأتها
       vars:
         FLUTTER_VERSION: "3.22.2"
         GRADLE_VERSION: "8.1.0"
         KOTLIN_VERSION: "1.9.22"
+        FIREBASE_API_KEY: $FIREBASE_API_KEY
+        FIREBASE_APP_ID: $FIREBASE_APP_ID
+        FIREBASE_SERVICE_ACCOUNT_JSON: $FIREBASE_SERVICE_ACCOUNT_JSON
+        FIREBASE_TOKEN: $FIREBASE_TOKEN
     
     scripts:
       - name: ⬇️ تثبيت Flutter
@@ -19,7 +21,7 @@ workflows:
 
       - name: 🔧 إعداد Firebase
         script: |
-          echo $FIREBASE_SERVICE_ACCOUNT_JSON > /tmp/firebase_account.json
+          echo "$FIREBASE_SERVICE_ACCOUNT_JSON" > /tmp/firebase_account.json
           export GOOGLE_APPLICATION_CREDENTIALS="/tmp/firebase_account.json"
           firebase login:ci --token $FIREBASE_TOKEN
 
@@ -29,7 +31,7 @@ workflows:
             --dart-define=FIREBASE_API_KEY=$FIREBASE_API_KEY \
             --dart-define=FIREBASE_APP_ID=$FIREBASE_APP_ID
 
-      - name: 🚀 النشر على Firebase App Distribution
+      - name: 🚀 النشر على Firebase
         script: |
           firebase appdistribution:distribute \
             build/app/outputs/flutter-apk/app-release.apk \
@@ -39,8 +41,3 @@ workflows:
     
     artifacts:
       - build/app/outputs/**/*.apk
-    
-    publishing:
-      email:
-        recipients:
-          - your.email@example.com

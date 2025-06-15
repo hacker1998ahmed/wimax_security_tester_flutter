@@ -1,68 +1,63 @@
 workflows:
-  android_production:
-    name: 🚀 Android Production Build
+  android-release:
+    name: Android Release Workflow
     environment:
+      groups:
+        - firebase
       vars:
         FLUTTER_VERSION: "3.32.4"
         GRADLE_VERSION: "7.5"
         KOTLIN_VERSION: "1.7.20"
-        FIREBASE_API_KEY: $FIREBASE_API_KEY
-        FIREBASE_APP_ID: $FIREBASE_APP_ID
-        FIREBASE_SERVICE_ACCOUNT_JSON: $FIREBASE_SERVICE_ACCOUNT_JSON
-    
+      flutter: $FLUTTER_VERSION
     scripts:
-      - name: ⬇️ تثبيت Flutter
+      # ========== مرحلة الإعداد ==========
+      - name: Set Up Environment
         script: |
-          export FLUTTER_HOME="$HOME/programs/flutter"
-          rm -rf $FLUTTER_HOME
-          git clone https://github.com/flutter/flutter.git -b $FLUTTER_VERSION $FLUTTER_HOME
-          export PATH="$FLUTTER_HOME/bin:$PATH"
+          echo "=== تنظيف البيئة ==="
           flutter channel stable
-          flutter doctor -v
+          flutter upgrade --force
+          flutter clean
+          
+          echo "=== تنظيف Gradle ==="
+          rm -rf android/.gradle
+          rm -rf ~/.gradle/caches
+          ./gradlew --stop
+          
+          echo "=== إصلاح الأذونات ==="
+          find android -type f -name "*.gradle" -exec chmod 644 {} \;
+          chmod +x ./gradlew
 
-      - name: 🛠️ إنشاء هيكل المشروع
+      # ========== تثبيت التبعيات ==========
+      - name: Install Dependencies
         script: |
-          if [ ! -d "android" ]; then
-            flutter create --platforms android .
-          fi
-          
-          mkdir -p android/gradle/wrapper
-          
-          # إنشاء ملف gradle-wrapper.properties مع تنسيق صحيح
-          echo "distributionBase=GRADLE_USER_HOME" > android/gradle/wrapper/gradle-wrapper.properties
-          echo "distributionPath=wrapper/dists" >> android/gradle/wrapper/gradle-wrapper.properties
-          echo "distributionUrl=https\\://services.gradle.org/distributions/gradle-$GRADLE_VERSION-bin.zip" >> android/gradle/wrapper/gradle-wrapper.properties
-          echo "zipStoreBase=GRADLE_USER_HOME" >> android/gradle/wrapper/gradle-wrapper.properties
-          echo "zipStorePath=wrapper/dists" >> android/gradle/wrapper/gradle-wrapper.properties
-          
-          echo "flutter.sdk=$FLUTTER_HOME" > android/local.properties
-          echo "sdk.dir=$ANDROID_SDK_ROOT" >> android/local.properties
-          chmod +x android/gradlew
-
-      - name: 🔄 تحديث التبعيات
-        script: |
+          echo "=== تثبيت التبعيات ==="
           flutter pub get
-          cd android && ./gradlew clean --stacktrace && cd ..
+          
+          cd android
+          ./gradlew clean
 
-      - name: 🏗️ بناء APK
+      # ========== مرحلة البناء ==========
+      - name: Build APK
         script: |
+          echo "=== بناء APK ==="
           flutter build apk --release \
             --dart-define=FIREBASE_API_KEY=$FIREBASE_API_KEY \
-            --dart-define=FIREBASE_APP_ID=$FIREBASE_APP_ID \
-            --verbose
+            --dart-define=FIREBASE_APP_ID=$FIREBASE_APP_ID
 
-      - name: 🚀 النشر على Firebase
+      # ========== النشر ==========
+      - name: Publish to Firebase App Distribution
         script: |
-          echo "$FIREBASE_SERVICE_ACCOUNT_JSON" > /tmp/firebase_account.json
-          firebase appdistribution:distribute \
-            build/app/outputs/flutter-apk/app-release.apk \
-            --app $FIREBASE_APP_ID \
-            --groups "testers" \
-            --service-account-json /tmp/firebase_account.json
-    
+          echo "=== النشر على Firebase ==="
+          echo $FIREBASE_SERVICE_ACCOUNT_JSON > firebase_credentials.json
+          flutter pub run flutterfire_cli distribute \
+            --release=build/app/outputs/flutter-apk/app-release.apk \
+            --credentials-file=firebase_credentials.json
+
     artifacts:
-      - build/app/outputs/**/*.apk
-    cache:
-      cache_paths:
-        - ~/.gradle/caches
-        - ~/.pub-cache
+      - build/app/outputs/flutter-apk/app-release.apk
+      - build/app/outputs/bundle/release/app-release.aab
+
+    publishing:
+      email:
+        recipients:
+          - your-email@example.com

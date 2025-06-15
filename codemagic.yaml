@@ -2,8 +2,6 @@ workflows:
   android-release:
     name: Android Release Workflow
     environment:
-      groups:
-        - secure  # مجموعة المتغيرات السرية التي أنشأتها
       vars:
         FLUTTER_VERSION: "3.32.4"
       flutter: $FLUTTER_VERSION
@@ -16,14 +14,21 @@ workflows:
           flutter upgrade --force
           flutter clean
           
+          echo "=== الانتقال إلى مجلد Android ==="
+          cd android
+          
           echo "=== تنظيف Gradle ==="
-          rm -rf android/.gradle
+          rm -rf .gradle
           rm -rf ~/.gradle/caches
-          ./gradlew --stop
           
           echo "=== إصلاح الأذونات ==="
-          find android -type f -name "*.gradle" -exec chmod 644 {} \;
-          chmod +x ./gradlew
+          find . -type f -name "*.gradle" -exec chmod 644 {} \;
+          chmod +x gradlew
+          
+          echo "=== إيقاف عمليات Gradle ==="
+          ./gradlew --stop || echo "Gradle stop failed (normal if no daemon was running)"
+          
+          cd ..
 
       # ========== تثبيت التبعيات ==========
       - name: Install Dependencies
@@ -33,6 +38,7 @@ workflows:
           
           cd android
           ./gradlew clean
+          cd ..
 
       # ========== مرحلة البناء ==========
       - name: Build APK
@@ -43,19 +49,8 @@ workflows:
             --dart-define=FIREBASE_APP_ID=$FIREBASE_APP_ID \
             --dart-define=FIREBASE_TOKEN=$FIREBASE_TOKEN
 
-      # ========== النشر على Firebase ==========
-      - name: Publish to Firebase
-        script: |
-          echo "=== النشر على Firebase ==="
-          echo $FIREBASE_SERVICE_ACCOUNT_JSON > firebase_credentials.json
-          flutter pub run flutterfire_cli distribute \
-            --release=build/app/outputs/flutter-apk/app-release.apk \
-            --credentials-file=firebase_credentials.json \
-            --token $FIREBASE_TOKEN
-
     artifacts:
       - build/app/outputs/flutter-apk/app-release.apk
-      - build/app/outputs/bundle/release/app-release.aab
 
     publishing:
       email:

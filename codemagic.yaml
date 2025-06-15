@@ -3,100 +3,44 @@ workflows:
     name: 🚀 Android Production Build
     environment:
       groups:
-        - flutter
-        - firebase
+        - firebase  # اسم المجموعة التي أنشأتها
       vars:
         FLUTTER_VERSION: "3.22.2"
         GRADLE_VERSION: "8.1.0"
         KOTLIN_VERSION: "1.9.22"
+    
     scripts:
-      # الخطوة 1: تثبيت Flutter مع إصلاح المسارات
       - name: ⬇️ تثبيت Flutter
         script: |
           export FLUTTER_HOME="$HOME/programs/flutter"
-          if [ ! -d "$FLUTTER_HOME" ]; then
-            git clone https://github.com/flutter/flutter.git -b $FLUTTER_VERSION $FLUTTER_HOME
-          fi
+          git clone https://github.com/flutter/flutter.git -b $FLUTTER_VERSION $FLUTTER_HOME
           export PATH="$FLUTTER_HOME/bin:$PATH"
-          flutter config --enable-web
           flutter doctor -v
 
-      # الخطوة 2: إعداد Gradle مع إصلاح الإصدارات
-      - name: 🛠️ إعداد Gradle
+      - name: 🔧 إعداد Firebase
         script: |
-          echo "systemProp.gradle.parallel=true" > ~/.gradle/gradle.properties
-          echo "org.gradle.daemon=true" >> ~/.gradle/gradle.properties
-          
-          # تحديث ملف gradle-wrapper.properties
-          sed -i '' "s/gradle-.*.zip/gradle-$GRADLE_VERSION-bin.zip/g" android/gradle-wrapper.properties
-          
-          # تحديث build.gradle
-          sed -i '' "s/kotlin_version = .*/kotlin_version = '$KOTLIN_VERSION'/g" android/build.gradle
-          sed -i '' "s/com.android.tools.build:gradle:.*/com.android.tools.build:gradle:$GRADLE_VERSION/g" android/build.gradle
+          echo $FIREBASE_SERVICE_ACCOUNT_JSON > /tmp/firebase_account.json
+          export GOOGLE_APPLICATION_CREDENTIALS="/tmp/firebase_account.json"
+          firebase login:ci --token $FIREBASE_TOKEN
 
-      # الخطوة 3: إعداد البيئة مع تحسينات الأداء
-      - name: ⚙️ إعداد البيئة
-        script: |
-          npm install -g firebase-tools@latest --force --unsafe-perm
-          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
-          export PATH=$JAVA_HOME/bin:$PATH
-
-      # الخطوة 4: تحديث التبعيات مع معالجة الأخطاء
-      - name: 🔄 تحديث التبعيات
-        script: |
-          flutter pub upgrade --major-versions
-          
-          # حل بديل إذا فشل flutter pub get
-          if ! flutter pub get; then
-            echo "⚠️ Retrying with --no-sound-null-safety"
-            flutter pub get --no-sound-null-safety
-          fi
-          
-          # تنظيف مشروع Gradle
-          cd android && ./gradlew clean && cd ..
-
-      # الخطوة 5: بناء APK مع تحسينات
       - name: 🏗️ بناء APK
         script: |
-          set -e
           flutter build apk --release \
             --dart-define=FIREBASE_API_KEY=$FIREBASE_API_KEY \
-            --dart-define=FIREBASE_APP_ID=$FIREBASE_APP_ID \
-            --split-debug-info=./debug_info \
-            --obfuscate \
-            --split-per-abi \
-            --verbose
+            --dart-define=FIREBASE_APP_ID=$FIREBASE_APP_ID
 
-          # التحقق من وجود الملف الناتج
-          if [ ! -f "build/app/outputs/flutter-apk/app-release.apk" ]; then
-            echo "❌ فشل البناء - جرب بناء debug أولاً"
-            flutter build apk --debug
-            exit 1
-          fi
-
-      # الخطوة 6: النشر على Firebase مع معالجة الأخطاء
-      - name: 📤 نشر على Firebase
+      - name: 🚀 النشر على Firebase App Distribution
         script: |
-          echo "$FIREBASE_SERVICE_ACCOUNT_JSON" > /tmp/service-account.json
-          
-          if ! firebase appdistribution:distribute \
+          firebase appdistribution:distribute \
             build/app/outputs/flutter-apk/app-release.apk \
             --app $FIREBASE_APP_ID \
-            --service-account-json /tmp/service-account.json \
-            --groups "testers"; then
-            
-            echo "⚠️ فشل النشر - جرب تحميل APK يدوياً"
-            exit 0
-          fi
+            --groups "testers" \
+            --token $FIREBASE_TOKEN
+    
     artifacts:
       - build/app/outputs/**/*.apk
-      - debug_info/**
+    
     publishing:
       email:
         recipients:
-          - "your.email@example.com"
-    cache:
-      cache_paths:
-        - ~/.gradle/caches
-        - ~/.pub-cache
-        - $FLUTTER_HOME/.pub-cache
+          - your.email@example.com

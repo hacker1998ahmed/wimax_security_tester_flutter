@@ -3,7 +3,7 @@ workflows:
     name: 🚀 Android Production Build
     environment:
       vars:
-        FLUTTER_VERSION: "3.22.2"  # سيتم فرض هذا الإصدار
+        FLUTTER_VERSION: "3.22.2"
         GRADLE_VERSION: "8.1.0"
         KOTLIN_VERSION: "1.9.22"
         FIREBASE_API_KEY: $FIREBASE_API_KEY
@@ -13,26 +13,33 @@ workflows:
     scripts:
       - name: ⬇️ تثبيت Flutter
         script: |
-          export FLUTTER_HOME="$HOME/programs/flutter_$FLUTTER_VERSION"
-          rm -rf $FLUTTER_HOME  # تأكد من تنظيف أي إصدارات سابقة
+          export FLUTTER_HOME="$HOME/programs/flutter"
+          rm -rf $FLUTTER_HOME
           git clone https://github.com/flutter/flutter.git -b $FLUTTER_VERSION $FLUTTER_HOME
           export PATH="$FLUTTER_HOME/bin:$PATH"
-          flutter config --enable-android
           flutter doctor -v
 
-      - name: 🔧 إعداد Firebase
+      - name: 🔧 إعداد المشروع
         script: |
-          echo "$FIREBASE_SERVICE_ACCOUNT_JSON" > /tmp/firebase_account.json
-          export GOOGLE_APPLICATION_CREDENTIALS="/tmp/firebase_account.json"
+          # إنشاء local.properties إذا لم يكن موجوداً
+          if [ ! -f "android/local.properties" ]; then
+            echo "flutter.sdk=$FLUTTER_HOME" > android/local.properties
+            echo "sdk.dir=/usr/local/share/android-sdk" >> android/local.properties
+          fi
+          
+          # تحديث إصدار Gradle
+          sed -i '' "s/gradle-.*.zip/gradle-$GRADLE_VERSION-bin.zip/g" android/gradle-wrapper.properties
 
       - name: 🏗️ بناء APK
         script: |
+          flutter pub get
           flutter build apk --release \
             --dart-define=FIREBASE_API_KEY=$FIREBASE_API_KEY \
             --dart-define=FIREBASE_APP_ID=$FIREBASE_APP_ID
 
       - name: 🚀 النشر على Firebase
         script: |
+          echo "$FIREBASE_SERVICE_ACCOUNT_JSON" > /tmp/firebase_account.json
           firebase appdistribution:distribute \
             build/app/outputs/flutter-apk/app-release.apk \
             --app $FIREBASE_APP_ID \

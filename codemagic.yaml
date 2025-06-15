@@ -17,53 +17,37 @@ workflows:
           rm -rf $FLUTTER_HOME
           git clone https://github.com/flutter/flutter.git -b $FLUTTER_VERSION $FLUTTER_HOME
           export PATH="$FLUTTER_HOME/bin:$PATH"
+          flutter channel stable
           flutter doctor -v
 
-      - name: 🛠️ إعداد Gradle
+      - name: 🛠️ إنشاء هيكل المشروع
         script: |
+          # إنشاء هيكل Android إذا لم يكن موجوداً
           if [ ! -d "android" ]; then
             flutter create --platforms android .
           fi
           
-          # إنشاء ملف build.gradle
-          echo "buildscript {
-            ext {
-                kotlin_version = '$KOTLIN_VERSION'
-            }
-            repositories {
-                google()
-                mavenCentral()
-                gradlePluginPortal()
-            }
-            dependencies {
-                classpath 'com.android.tools.build:gradle:$GRADLE_VERSION'
-                classpath \"org.jetbrains.kotlin:kotlin-gradle-plugin:\$kotlin_version\"
-            }
-          }
-
-          allprojects {
-            repositories {
-                google()
-                mavenCentral()
-            }
-          }
-
-          task clean(type: Delete) {
-            delete rootProject.buildDir
-          }" > android/build.gradle
-
-          # إنشاء ملف gradle-wrapper.properties (بطريقة صحيحة لـ YAML)
-          echo "distributionBase=GRADLE_USER_HOME\ndistributionPath=wrapper/dists\ndistributionUrl=https\://services.gradle.org/distributions/gradle-$GRADLE_VERSION-bin.zip\nzipStoreBase=GRADLE_USER_HOME\nzipStorePath=wrapper/dists" > android/gradle/wrapper/gradle-wrapper.properties
+          # إنشاء مجلد gradle/wrapper إذا لم يكن موجوداً
+          mkdir -p android/gradle/wrapper
           
-          # إنشاء local.properties
+          # إنشاء ملف gradle-wrapper.properties كاملاً
+          echo "distributionBase=GRADLE_USER_HOME
+distributionPath=wrapper/dists
+distributionUrl=https\://services.gradle.org/distributions/gradle-$GRADLE_VERSION-bin.zip
+zipStoreBase=GRADLE_USER_HOME
+zipStorePath=wrapper/dists" > android/gradle/wrapper/gradle-wrapper.properties
+          
+          # إنشاء ملف local.properties
           echo "flutter.sdk=$FLUTTER_HOME" > android/local.properties
           echo "sdk.dir=$ANDROID_SDK_ROOT" >> android/local.properties
+          
+          # منح صلاحيات التنفيذ
           chmod +x android/gradlew
 
       - name: 🔄 تحديث التبعيات
         script: |
           flutter pub get
-          cd android && ./gradlew clean --stacktrace --refresh-dependencies && cd ..
+          cd android && ./gradlew clean --stacktrace && cd ..
 
       - name: 🏗️ بناء APK
         script: |
@@ -83,6 +67,7 @@ workflows:
     
     artifacts:
       - build/app/outputs/**/*.apk
+      - android/gradle/wrapper/gradle-wrapper.properties
     cache:
       cache_paths:
         - ~/.gradle/caches

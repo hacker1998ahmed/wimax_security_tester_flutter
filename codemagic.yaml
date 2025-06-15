@@ -4,7 +4,7 @@ workflows:
     environment:
       vars:
         FLUTTER_VERSION: "3.32.4"
-        GRADLE_VERSION: "7.5"  # تم التغيير إلى إصدار متوفر
+        GRADLE_VERSION: "7.5"
         KOTLIN_VERSION: "1.7.20"
         FIREBASE_API_KEY: $FIREBASE_API_KEY
         FIREBASE_APP_ID: $FIREBASE_APP_ID
@@ -19,13 +19,13 @@ workflows:
           export PATH="$FLUTTER_HOME/bin:$PATH"
           flutter doctor -v
 
-      - name: 🛠️ إعداد Gradle (الطريقة المؤكدة)
+      - name: 🛠️ إعداد Gradle
         script: |
           if [ ! -d "android" ]; then
             flutter create --platforms android .
           fi
           
-          # إنشاء ملف build.gradle المعدل
+          # إنشاء ملف build.gradle
           echo "buildscript {
             ext {
                 kotlin_version = '$KOTLIN_VERSION'
@@ -33,7 +33,7 @@ workflows:
             repositories {
                 google()
                 mavenCentral()
-                gradlePluginPortal()  # أضيف هذا السطر
+                gradlePluginPortal()
             }
             dependencies {
                 classpath 'com.android.tools.build:gradle:$GRADLE_VERSION'
@@ -52,13 +52,10 @@ workflows:
             delete rootProject.buildDir
           }" > android/build.gradle
 
-          # استخدام توزيعة Gradle مباشرة من services.gradle.org
-          echo "distributionBase=GRADLE_USER_HOME
-          distributionPath=wrapper/dists
-          distributionUrl=https\://services.gradle.org/distributions/gradle-$GRADLE_VERSION-bin.zip
-          zipStoreBase=GRADLE_USER_HOME
-          zipStorePath=wrapper/dists" > android/gradle/wrapper/gradle-wrapper.properties
+          # إنشاء ملف gradle-wrapper.properties (بطريقة صحيحة لـ YAML)
+          echo "distributionBase=GRADLE_USER_HOME\ndistributionPath=wrapper/dists\ndistributionUrl=https\://services.gradle.org/distributions/gradle-$GRADLE_VERSION-bin.zip\nzipStoreBase=GRADLE_USER_HOME\nzipStorePath=wrapper/dists" > android/gradle/wrapper/gradle-wrapper.properties
           
+          # إنشاء local.properties
           echo "flutter.sdk=$FLUTTER_HOME" > android/local.properties
           echo "sdk.dir=$ANDROID_SDK_ROOT" >> android/local.properties
           chmod +x android/gradlew

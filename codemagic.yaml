@@ -3,9 +3,9 @@ workflows:
     name: 🚀 Android Production Build
     environment:
       vars:
-        FLUTTER_VERSION: "3.32.4"  # تم التحديث لآخر إصدار مستقر
-        GRADLE_VERSION: "8.0.2"     # تم تغيير الإصدار إلى 8.0.2
-        KOTLIN_VERSION: "1.8.22"    # تم تعديل لتتوافق مع Gradle 8.0
+        FLUTTER_VERSION: "3.32.4"
+        GRADLE_VERSION: "7.6"  # تم التغيير إلى إصدار أقدم وأكثر استقراراً
+        KOTLIN_VERSION: "1.7.20"  # معدل ليتوافق مع Gradle 7.6
         FIREBASE_API_KEY: $FIREBASE_API_KEY
         FIREBASE_APP_ID: $FIREBASE_APP_ID
         FIREBASE_SERVICE_ACCOUNT_JSON: $FIREBASE_SERVICE_ACCOUNT_JSON
@@ -19,21 +19,42 @@ workflows:
           export PATH="$FLUTTER_HOME/bin:$PATH"
           flutter doctor -v
 
-      - name: 🛠️ إعداد Gradle
+      - name: 🛠️ إعداد Gradle (الطريقة التقليدية)
         script: |
-          # إنشاء هيكل Android إذا لم يكن موجوداً
           if [ ! -d "android" ]; then
             flutter create --platforms android .
           fi
           
-          # استخدام رابط بديل لـ Gradle
+          # استخدام الطريقة التقليدية بدلاً من plugins block
+          echo "buildscript {
+            ext {
+                kotlin_version = '$KOTLIN_VERSION'
+            }
+            repositories {
+                google()
+                mavenCentral()
+            }
+            dependencies {
+                classpath 'com.android.tools.build:gradle:$GRADLE_VERSION'
+                classpath \"org.jetbrains.kotlin:kotlin-gradle-plugin:\$kotlin_version\"
+            }
+          }
+
+          allprojects {
+            repositories {
+                google()
+                mavenCentral()
+            }
+          }
+
+          task clean(type: Delete) {
+            delete rootProject.buildDir
+          }" > android/build.gradle
+
           echo "distributionUrl=https\://services.gradle.org/distributions/gradle-$GRADLE_VERSION-bin.zip" > android/gradle/wrapper/gradle-wrapper.properties
           
-          # إنشاء local.properties
           echo "flutter.sdk=$FLUTTER_HOME" > android/local.properties
           echo "sdk.dir=$ANDROID_SDK_ROOT" >> android/local.properties
-          
-          # منح صلاحيات التنفيذ
           chmod +x android/gradlew
 
       - name: 🔄 تحديث التبعيات
@@ -59,7 +80,6 @@ workflows:
     
     artifacts:
       - build/app/outputs/**/*.apk
-      - android/gradle/wrapper/gradle-wrapper.properties
     cache:
       cache_paths:
         - ~/.gradle/caches

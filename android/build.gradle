@@ -1,6 +1,7 @@
 buildscript {
     ext {
-        kotlin_version = '1.9.22' // تأكد من توافق هذا الإصدار
+        kotlin_version = '1.9.22'
+        flutterVersion = '2.3.0'
     }
     repositories {
         google()
@@ -12,4 +13,17 @@ buildscript {
     }
 }
 
-// أزل تماماً أي إشارة لـ flutter-gradle-plugin من هنا
+plugins {
+    id "dev.flutter.flutter-gradle-plugin" version "$flutterVersion" apply false
+}
+
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+task clean(type: Delete) {
+    delete rootProject.buildDir
+}

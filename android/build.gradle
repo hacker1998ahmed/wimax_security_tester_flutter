@@ -1,14 +1,14 @@
 buildscript {
     ext {
-        kotlin_version = '1.9.0' // أو أحدث
-        flutterVersion = '1.0.0' // إصدار Flutter Gradle Plugin
+        kotlin_version = '1.9.22'  // أحدث إصدار متوافق
+        flutterVersion = '2.0.0'   // إصدار Flutter Gradle Plugin
     }
     repositories {
         google()
         mavenCentral()
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:8.1.0' // Gradle 8.1.0
+        classpath 'com.android.tools.build:gradle:8.1.0'
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
     }
 }
@@ -23,4 +23,8 @@ allprojects {
         google()
         mavenCentral()
     }
+}
+
+task clean(type: Delete) {
+    delete rootProject.buildDir
 }

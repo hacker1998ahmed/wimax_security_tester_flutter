@@ -3,9 +3,9 @@ workflows:
     name: 🚀 Android Production Build
     environment:
       vars:
-        FLUTTER_VERSION: "3.22.2"
-        GRADLE_VERSION: "8.1.0"
-        KOTLIN_VERSION: "1.9.22"
+        FLUTTER_VERSION: "3.32.4"  # تم التحديث لآخر إصدار مستقر
+        GRADLE_VERSION: "8.0.2"     # تم تغيير الإصدار إلى 8.0.2
+        KOTLIN_VERSION: "1.8.22"    # تم تعديل لتتوافق مع Gradle 8.0
         FIREBASE_API_KEY: $FIREBASE_API_KEY
         FIREBASE_APP_ID: $FIREBASE_APP_ID
         FIREBASE_SERVICE_ACCOUNT_JSON: $FIREBASE_SERVICE_ACCOUNT_JSON
@@ -17,41 +17,29 @@ workflows:
           rm -rf $FLUTTER_HOME
           git clone https://github.com/flutter/flutter.git -b $FLUTTER_VERSION $FLUTTER_HOME
           export PATH="$FLUTTER_HOME/bin:$PATH"
-          flutter channel stable
           flutter doctor -v
 
-      - name: 🛠️ إنشاء هيكل Android
+      - name: 🛠️ إعداد Gradle
         script: |
           # إنشاء هيكل Android إذا لم يكن موجوداً
           if [ ! -d "android" ]; then
-            echo "Creating Android project structure..."
             flutter create --platforms android .
           fi
           
-          # إنشاء ملفات Gradle الأساسية إذا لم تكن موجودة
-          if [ ! -f "android/gradle/wrapper/gradle-wrapper.properties" ]; then
-            echo "Generating Gradle wrapper files..."
-            cd android
-            gradle wrapper --gradle-version $GRADLE_VERSION --distribution-type bin
-            cd ..
-          fi
+          # استخدام رابط بديل لـ Gradle
+          echo "distributionUrl=https\://services.gradle.org/distributions/gradle-$GRADLE_VERSION-bin.zip" > android/gradle/wrapper/gradle-wrapper.properties
           
-          # تحديث إصدار Gradle
-          echo "Updating Gradle to version $GRADLE_VERSION..."
-          sed -i '' "s/gradle-.*.zip/gradle-$GRADLE_VERSION-bin.zip/g" android/gradle/wrapper/gradle-wrapper.properties
-          
-          # إنشاء/تحديث local.properties
-          echo "Generating local.properties..."
+          # إنشاء local.properties
           echo "flutter.sdk=$FLUTTER_HOME" > android/local.properties
           echo "sdk.dir=$ANDROID_SDK_ROOT" >> android/local.properties
           
-          # منح صلاحيات التنفيذ لملفات Gradle
+          # منح صلاحيات التنفيذ
           chmod +x android/gradlew
 
       - name: 🔄 تحديث التبعيات
         script: |
           flutter pub get
-          cd android && ./gradlew clean && cd ..
+          cd android && ./gradlew clean --stacktrace && cd ..
 
       - name: 🏗️ بناء APK
         script: |
@@ -76,4 +64,3 @@ workflows:
       cache_paths:
         - ~/.gradle/caches
         - ~/.pub-cache
-        - $FLUTTER_HOME/.pub-cache

@@ -3,27 +3,27 @@ workflows:
     name: 🚀 Android Production Build
     environment:
       vars:
-        FLUTTER_VERSION: "3.22.2"
+        FLUTTER_VERSION: "3.22.2"  # سيتم فرض هذا الإصدار
         GRADLE_VERSION: "8.1.0"
         KOTLIN_VERSION: "1.9.22"
         FIREBASE_API_KEY: $FIREBASE_API_KEY
         FIREBASE_APP_ID: $FIREBASE_APP_ID
         FIREBASE_SERVICE_ACCOUNT_JSON: $FIREBASE_SERVICE_ACCOUNT_JSON
-        FIREBASE_TOKEN: $FIREBASE_TOKEN
     
     scripts:
       - name: ⬇️ تثبيت Flutter
         script: |
-          export FLUTTER_HOME="$HOME/programs/flutter"
+          export FLUTTER_HOME="$HOME/programs/flutter_$FLUTTER_VERSION"
+          rm -rf $FLUTTER_HOME  # تأكد من تنظيف أي إصدارات سابقة
           git clone https://github.com/flutter/flutter.git -b $FLUTTER_VERSION $FLUTTER_HOME
           export PATH="$FLUTTER_HOME/bin:$PATH"
+          flutter config --enable-android
           flutter doctor -v
 
       - name: 🔧 إعداد Firebase
         script: |
           echo "$FIREBASE_SERVICE_ACCOUNT_JSON" > /tmp/firebase_account.json
           export GOOGLE_APPLICATION_CREDENTIALS="/tmp/firebase_account.json"
-          firebase login:ci --token $FIREBASE_TOKEN
 
       - name: 🏗️ بناء APK
         script: |
@@ -37,7 +37,7 @@ workflows:
             build/app/outputs/flutter-apk/app-release.apk \
             --app $FIREBASE_APP_ID \
             --groups "testers" \
-            --token $FIREBASE_TOKEN
+            --service-account-json /tmp/firebase_account.json
     
     artifacts:
       - build/app/outputs/**/*.apk
